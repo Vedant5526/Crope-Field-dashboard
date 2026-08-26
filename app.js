@@ -513,19 +513,19 @@ class App {
     }
 
     const historyContainer = document.getElementById("detail-crop-history");
-    if (fieldCrops.length === 0) {
-      historyContainer.innerHTML = `<li class="text-xs text-slate-400 italic">No crops cultivated on this field yet.</li>`;
-    } else {
-      historyContainer.innerHTML = fieldCrops.map(crop => {
+    let historyHTML = "";
+
+    // 1. Show Active Crops first
+    if (fieldCrops.length > 0) {
+      historyHTML += fieldCrops.map(crop => {
         let statusColor = "text-blue-600 bg-blue-50";
         if (crop.status === "Ready for Harvest") statusColor = "text-yellow-600 bg-yellow-50";
         else if (crop.status === "Harvested") statusColor = "text-slate-600 bg-slate-50";
-        
         return `
-          <li class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
+          <li class="flex items-center justify-between p-2 rounded-lg bg-emerald-50 border border-emerald-100 mb-2">
             <div>
-              <span class="font-bold text-xs text-slate-800">${crop.crop_name}</span>
-              <span class="text-[10px] text-slate-400 block">${crop.variety} | Sown: ${crop.sowing_date}</span>
+              <span class="font-bold text-xs text-emerald-900">${crop.crop_name} <span class="text-[9px] text-emerald-600 ml-1">(Current)</span></span>
+              <span class="text-[10px] text-emerald-700 block">${crop.variety} | Sown: ${crop.sowing_date}</span>
             </div>
             <span class="text-[10px] px-2 py-0.5 rounded font-semibold ${statusColor}">${crop.status}</span>
           </li>
@@ -533,24 +533,29 @@ class App {
       }).join("");
     }
 
-    // Render Past Log Entries (field_history)
-    const activityContainer = document.getElementById("detail-crop-history-activity");
-    if (activityContainer) {
-      if (!field.history || field.history.length === 0) {
-        activityContainer.innerHTML = `<li class="text-xs text-slate-400 italic">No past logs for this field.</li>`;
-      } else {
-        activityContainer.innerHTML = field.history.map(h => `
-          <li class="p-2 rounded-lg bg-slate-50 border border-slate-100 mb-1">
-            <div class="flex justify-between items-center mb-1">
-              <span class="font-bold text-[11px] text-slate-800">${h.crop}</span>
-              <span class="text-[9px] text-slate-400">${h.date}</span>
-            </div>
-            <p class="text-[10px] text-slate-600">${h.notes}</p>
-            ${h.yield && h.yield !== '—' ? `<span class="inline-block mt-1 text-[9px] px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded font-semibold">Yield: ${h.yield}</span>` : ''}
-          </li>
-        `).join("");
-      }
+    // 2. Show Past History / Logs
+    if (field.history && field.history.length > 0) {
+      historyHTML += `<div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-4 mb-2 pb-1 border-b border-slate-100">Past History & Logs</div>`;
+      historyHTML += field.history.map(h => `
+        <li class="p-2 rounded-lg bg-slate-50 border border-slate-100 mb-1.5">
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-bold text-[11px] text-slate-800">${h.crop}</span>
+            <span class="text-[9px] text-slate-400">${h.date}</span>
+          </div>
+          <p class="text-[10px] text-slate-600 leading-relaxed">${h.notes}</p>
+          ${h.yield && h.yield !== '—' ? `<span class="inline-block mt-1 text-[9px] px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded font-semibold border border-emerald-100">Yield: ${h.yield}</span>` : ''}
+        </li>
+      `).join("");
     }
+
+    if (historyHTML === "") {
+      historyHTML = `<li class="text-xs text-slate-400 italic py-2">No history or crops recorded for this field.</li>`;
+    }
+    if (historyContainer) historyContainer.innerHTML = historyHTML;
+
+    // Clear the separate activity container if it exists (since we moved it to the main history tab)
+    const activityContainer = document.getElementById("detail-crop-history-activity");
+    if (activityContainer) activityContainer.innerHTML = "";
 
     // Default to history tab
     this.switchFieldTab('history');
