@@ -428,6 +428,41 @@ app.get('/api/sensor-readings', async (req, res) => {
   }
 });
 
+// GET sensor readings for a specific field (last N days)
+app.get('/api/sensor-readings/:fieldId', async (req, res) => {
+  const { fieldId } = req.params;
+  const days = parseInt(req.query.days) || 7;
+  try {
+    const [rows] = await pool.query(
+      `SELECT * FROM sensor_readings
+       WHERE field_id = ? AND timestamp >= DATE_SUB(NOW(), INTERVAL ? DAY)
+       ORDER BY timestamp DESC LIMIT 100`,
+      [fieldId, days]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/field-history — add a manual log / activity entry for a field
+app.post('/api/field-history', async (req, res) => {
+  const { field_id, history_date, crop, yield_amount, notes } = req.body;
+  if (!field_id || !history_date || !notes) {
+    return res.status(400).json({ error: 'field_id, history_date and notes are required.' });
+  }
+  try {
+    await pool.query(
+      'INSERT INTO field_history (field_id, history_date, crop, yield_amount, notes) VALUES (?, ?, ?, ?, ?)',
+      [field_id, history_date, crop || 'General', yield_amount || '—', notes]
+    );
+    res.status(201).json({ message: 'Log entry added.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 app.post('/api/sensor-readings', async (req, res) => {
   const { field_id, timestamp, moisture, temp_soil, temp_ambient, humidity_ambient, ph } = req.body;
   try {

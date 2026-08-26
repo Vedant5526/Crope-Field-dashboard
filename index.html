@@ -1065,17 +1065,94 @@
           </div>
         </div>
 
-        <!-- Right logs tabs panel -->
-        <div class="md:col-span-2 space-y-4">
-          <!-- Crop History list -->
-          <div>
-            <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2 flex items-center space-x-1.5">
-              <i class="fas fa-history text-slate-400"></i>
-              <span>Crop Cultivation Cycles</span>
-            </h4>
-            <ul id="detail-crop-history" class="space-y-2 max-h-40 overflow-y-auto pr-1">
-              <!-- JS Injections -->
+        <!-- Right: History & Logs tabbed panel -->
+        <div class="md:col-span-2 space-y-3">
+
+          <!-- Tab Buttons -->
+          <div class="flex gap-1 bg-slate-100 p-1 rounded-xl">
+            <button onclick="app.switchFieldTab('history')" id="ftab-history"
+              class="field-tab-btn flex-1 py-1.5 text-[11px] font-bold rounded-lg transition bg-white text-slate-800 shadow-sm">
+              📋 Crop History
+            </button>
+            <button onclick="app.switchFieldTab('sensor')" id="ftab-sensor"
+              class="field-tab-btn flex-1 py-1.5 text-[11px] font-bold rounded-lg transition text-slate-500">
+              📡 Sensor Log
+            </button>
+            <button onclick="app.switchFieldTab('activity')" id="ftab-activity"
+              class="field-tab-btn flex-1 py-1.5 text-[11px] font-bold rounded-lg transition text-slate-500">
+              📝 Add Log Entry
+            </button>
+          </div>
+
+          <!-- TAB: Crop History -->
+          <div id="ftab-panel-history" class="field-tab-panel">
+            <ul id="detail-crop-history" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+              <!-- JS injected -->
             </ul>
+          </div>
+
+          <!-- TAB: Sensor Log -->
+          <div id="ftab-panel-sensor" class="field-tab-panel hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Recent IoT Readings</span>
+              <select id="sensor-log-days" onchange="app.loadSensorLog()" class="text-[10px] border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-emerald-400">
+                <option value="3">Last 3 days</option>
+                <option value="7" selected>Last 7 days</option>
+                <option value="14">Last 14 days</option>
+                <option value="30">Last 30 days</option>
+              </select>
+            </div>
+            <div id="sensor-log-table" class="overflow-x-auto rounded-xl border border-slate-100">
+              <table class="w-full text-[10px]">
+                <thead class="bg-slate-50 text-slate-500 font-bold uppercase">
+                  <tr>
+                    <th class="px-2 py-2 text-left">Date & Time</th>
+                    <th class="px-2 py-2 text-right">Moisture%</th>
+                    <th class="px-2 py-2 text-right">Soil°C</th>
+                    <th class="px-2 py-2 text-right">Air°C</th>
+                    <th class="px-2 py-2 text-right">Humid%</th>
+                    <th class="px-2 py-2 text-right">pH</th>
+                  </tr>
+                </thead>
+                <tbody id="sensor-log-body" class="divide-y divide-slate-50">
+                  <tr><td colspan="6" class="text-center py-4 text-slate-400 italic">Loading sensor data...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p id="sensor-log-count" class="text-[10px] text-slate-400 mt-1"></p>
+          </div>
+
+          <!-- TAB: Add Log Entry -->
+          <div id="ftab-panel-activity" class="field-tab-panel hidden">
+            <form onsubmit="event.preventDefault(); app.handleAddFieldLog();" class="space-y-3">
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Date</label>
+                  <input type="date" id="log-date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white" required />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Crop / Activity Type</label>
+                  <input type="text" id="log-crop" placeholder="e.g. Wheat, Irrigation, Spraying" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white" />
+                </div>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Quantity / Yield (optional)</label>
+                <input type="text" id="log-yield" placeholder="e.g. 35 Tons, 200 L water, 2 kg fertilizer" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Notes / Observations</label>
+                <textarea id="log-notes" rows="3" placeholder="Describe what was observed, done, or recorded on this field today..." class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white resize-none" required></textarea>
+              </div>
+              <div id="log-msg" class="hidden text-xs font-semibold rounded-lg px-3 py-2"></div>
+              <button type="submit" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl transition shadow-sm">
+                ✚ Save Log Entry
+              </button>
+            </form>
+            <!-- Past log entries (refreshed after saving) -->
+            <div class="mt-4">
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Past Entries</p>
+              <ul id="detail-crop-history-activity" class="space-y-1.5 max-h-44 overflow-y-auto pr-1"></ul>
+            </div>
           </div>
 
         </div>

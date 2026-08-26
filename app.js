@@ -533,10 +533,140 @@ class App {
       }).join("");
     }
 
+    // Render Past Log Entries (field_history)
+    const activityContainer = document.getElementById("detail-crop-history-activity");
+    if (activityContainer) {
+      if (!field.history || field.history.length === 0) {
+        activityContainer.innerHTML = `<li class="text-xs text-slate-400 italic">No past logs for this field.</li>`;
+      } else {
+        activityContainer.innerHTML = field.history.map(h => `
+          <li class="p-2 rounded-lg bg-slate-50 border border-slate-100 mb-1">
+            <div class="flex justify-between items-center mb-1">
+              <span class="font-bold text-[11px] text-slate-800">${h.crop}</span>
+              <span class="text-[9px] text-slate-400">${h.date}</span>
+            </div>
+            <p class="text-[10px] text-slate-600">${h.notes}</p>
+            ${h.yield && h.yield !== '—' ? `<span class="inline-block mt-1 text-[9px] px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded font-semibold">Yield: ${h.yield}</span>` : ''}
+          </li>
+        `).join("");
+      }
+    }
+
+    // Default to history tab
+    this.switchFieldTab('history');
+    const msgEl = document.getElementById('log-msg');
+    if (msgEl) msgEl.classList.add('hidden');
+    document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('log-crop').value = '';
+    document.getElementById('log-yield').value = '';
+    document.getElementById('log-notes').value = '';
 
     // Show Modal
     this.openModal("field-detail-modal");
   }
+
+  // --- Field Detail Tabs & Logs ---
+
+  switchFieldTab(tabName) {
+    ['history', 'sensor', 'activity'].forEach(t => {
+      const btn = document.getElementById(`ftab-${t}`);
+      const panel = document.getElementById(`ftab-panel-${t}`);
+      if (!btn || !panel) return;
+      
+      if (t === tabName) {
+        btn.classList.add('bg-white', 'text-slate-800', 'shadow-sm');
+        btn.classList.remove('text-slate-500');
+        panel.classList.remove('hidden');
+      } else {
+        btn.classList.remove('bg-white', 'text-slate-800', 'shadow-sm');
+        btn.classList.add('text-slate-500');
+        panel.classList.add('hidden');
+      }
+    });
+
+    if (tabName === 'sensor') {
+      this.loadSensorLog();
+    }
+  }
+
+  async loadSensorLog() {
+    if (!this.activeFieldId) return;
+    const days = document.getElementById("sensor-log-days").value;
+    const tbody = document.getElementById("sensor-log-body");
+    const countEl = document.getElementById("sensor-log-count");
+    
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-slate-400 italic">Loading...</td></tr>`;
+    countEl.textContent = '';
+
+    try {
+      const res = await this.apiFetch(`/api/sensor-readings/${this.activeFieldId}?days=${days}`);
+      const readings = await res.json();
+      
+      if (!readings || readings.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-slate-400 italic">No sensor data recorded in this period.</td></tr>`;
+        return;
+      }
+      
+      countEl.textContent = `Showing ${readings.length} readings`;
+      tbody.innerHTML = readings.map(r => {
+        const d = new Date(r.timestamp);
+        const dateStr = d.toLocaleDateString(undefined, {month:'short', day:'numeric'}) + ' ' + d.toLocaleTimeString(undefined, {hour:'2-digit', minute:'2-digit'});
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="px-2 py-1.5 whitespace-nowrap text-slate-600">${dateStr}</td>
+            <td class="px-2 py-1.5 text-right font-medium text-slate-800">${r.moisture}%</td>
+            <td class="px-2 py-1.5 text-right font-medium text-slate-800">${r.temp_soil}°C</td>
+            <td class="px-2 py-1.5 text-right text-slate-600">${r.temp_ambient}°C</td>
+            <td class="px-2 py-1.5 text-right text-slate-600">${r.humidity_ambient}%</td>
+            <td class="px-2 py-1.5 text-right font-medium text-slate-800">${r.ph}</td>
+          </tr>
+        `;
+      }).join("");
+    } catch (e) {
+      console.error(e);
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-red-400 italic">Failed to load sensor data.</td></tr>`;
+    }
+  }
+
+  async handleAddFieldLog() {
+    if (this.currentRole === "Worker" || this.currentRole === "Viewer") {
+       alert("Insufficient permissions to add field logs.");
+       return;
+    }
+
+    const field_id = this.activeFieldId;
+    const history_date = document.getElementById('log-date').value;
+    const crop = document.getElementById('log-crop').value;
+    const yield_amount = document.getElementById('log-yield').value;
+    const notes = document.getElementById('log-notes').value;
+    const msgEl = document.getElementById('log-msg');
+
+    if (!field_id || !history_date || !notes) return;
+
+    try {
+      const res = await this.apiFetch('/api/field-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ field_id, history_date, crop, yield_amount, notes })
+      });
+      if (res.ok) {
+        msgEl.textContent = 'Log entry saved successfully!';
+        msgEl.className = 'text-xs font-semibold rounded-lg px-3 py-2 bg-emerald-50 text-emerald-700 block mb-3';
+        
+        // Refresh the detail modal content (re-fetch fields to get updated history)
+        setTimeout(() => {
+          this.showFieldDetail(field_id);
+          this.switchFieldTab('activity');
+        }, 1000);
+      } else {
+        throw new Error("Failed to save");
+      }
+    } catch (e) {
+      msgEl.textContent = 'Error saving log entry.';
+      msgEl.className = 'text-xs font-semibold rounded-lg px-3 py-2 bg-red-50 text-red-700 block mb-3';
+    }
+  }
+
 
   async handleAddField() {
     const name = document.getElementById("field-name").value;
