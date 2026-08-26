@@ -200,10 +200,6 @@ class App {
       setTimeout(() => {
         this.initSensorsPage();
       }, 50);
-    } else if (viewName === "history") {
-      setTimeout(() => {
-        this.renderHistoryView();
-      }, 50);
     }
   }
 
@@ -402,52 +398,6 @@ class App {
         </div>
       `;
     }).join("");
-  }
-
-  // --- HISTORY & LOGS ---
-  async renderHistoryView() {
-    const tbody = document.getElementById("global-history-list");
-    if (!tbody) return;
-
-    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-slate-400 text-xs italic">Loading history...</td></tr>`;
-
-    try {
-      const fields = await this.getFields();
-      
-      // Flatten all field histories into one array
-      const allHistory = [];
-      fields.forEach(field => {
-        if (field.history && field.history.length > 0) {
-          field.history.forEach(h => {
-            allHistory.push({
-              fieldName: field.name,
-              ...h
-            });
-          });
-        }
-      });
-
-      // Sort by date descending
-      allHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-      if (allHistory.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-slate-400 text-xs italic">No history or logs recorded across any fields.</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = allHistory.map(h => `
-        <tr class="hover:bg-slate-50 transition">
-          <td class="px-4 py-3 whitespace-nowrap text-slate-500 text-xs">${h.date}</td>
-          <td class="px-4 py-3 font-bold text-slate-700 text-xs">${h.fieldName}</td>
-          <td class="px-4 py-3 font-semibold text-emerald-800 text-xs">${h.crop}</td>
-          <td class="px-4 py-3 text-slate-600 text-xs">${h.yield || '—'}</td>
-          <td class="px-4 py-3 text-slate-500 text-xs leading-relaxed max-w-sm truncate" title="${h.notes}">${h.notes}</td>
-        </tr>
-      `).join("");
-    } catch (e) {
-      console.error(e);
-      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-red-400 text-xs italic">Failed to load history data.</td></tr>`;
-    }
   }
 
   // --- FIELDS CRUD & LISTING ---
