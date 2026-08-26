@@ -483,6 +483,57 @@ app.post('/api/reset', async (req, res) => {
   }
 });
 
+// Proxy endpoint for Gov Mandi Prices (Variety-wise Daily Market Prices from data.gov.in)
+app.get('/api/external/mandi-price', async (req, res) => {
+  const { state, district, market, crop } = req.query;
+
+  if (!state || !district || !market || !crop) {
+    return res.status(400).json({ error: 'Missing query parameters (state, district, market, crop)' });
+  }
+
+  try {
+    // 1. Try to get Gov API key from settings table
+    const [rows] = await pool.query('SELECT gov_api_key FROM settings WHERE id = 1');
+    let apiKey = rows.length > 0 && rows[0].gov_api_key ? rows[0].gov_api_key.trim() : '';
+
+    // 2. Fallback to process.env.GOV_API_KEY
+    if (!apiKey) {
+      apiKey = process.env.GOV_API_KEY || '';
+    }
+
+    if (!apiKey) {
+      return res.json({ isMock: true, reason: 'No API key configured. Provide OGD API key in Settings.' });
+    }
+
+    // data.gov.in Agmarknet Variety Daily Market Prices Resource ID
+    const resourceId = '9ef84281-2a12-4174-a7bf-3d572bc2178a';
+    const url = `https://api.data.gov.in/resource/${resourceId}?api-key=${apiKey}&format=json&limit=10&filters[state]=${encodeURIComponent(state)}&filters[district]=${encodeURIComponent(district)}&filters[market]=${encodeURIComponent(market)}&filters[commodity]=${encodeURIComponent(crop)}`;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`data.gov.in API returned HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (data.records && data.records.length > 0) {
+      const record = data.records[0];
+      return res.json({
+        isMock: false,
+        min: parseFloat(record.min_price) || 0,
+        max: parseFloat(record.max_price) || 0,
+        modal: parseFloat(record.modal_price) || 0,
+        unit: "Quintal",
+        currency: "INR"
+      });
+    } else {
+      return res.json({ isMock: true, reason: `No matching records found in data.gov.in for ${crop} at ${market}` });
+    }
+  } catch (error) {
+    console.error('Error proxying Gov Mandi API:', error.message);
+    return res.json({ isMock: true, error: error.message });
+  }
+});
+
 // Serve frontend static assets from root directory
 app.use(express.static(path.join(__dirname)));
 

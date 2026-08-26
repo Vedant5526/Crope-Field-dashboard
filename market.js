@@ -60,42 +60,20 @@ class MarketPriceManager {
 
   // Fetch prices based on search parameters
   async getMarketPrice(state, district, market, crop) {
-    const apiKey = this.getGovApiKey();
-    if (apiKey && apiKey.trim() !== "") {
-      try {
-        return await this.fetchFromGovAPI(state, district, market, crop, apiKey);
-      } catch (e) {
-        console.error("Gov API fetch failed, falling back to mock mandi database:", e);
-        return this.getMockMarketPrice(state, district, market, crop);
+    try {
+      const url = `/api/external/mandi-price?state=${encodeURIComponent(state)}&district=${encodeURIComponent(district)}&market=${encodeURIComponent(market)}&crop=${encodeURIComponent(crop)}`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`HTTP error ${res.status}`);
       }
-    } else {
+      const priceInfo = await res.json();
+      if (priceInfo && !priceInfo.isMock) {
+        return priceInfo;
+      }
       return this.getMockMarketPrice(state, district, market, crop);
-    }
-  }
-
-  // Fetch from data.gov.in API (Variety-wise daily market prices)
-  async fetchFromGovAPI(state, district, market, crop, apiKey) {
-    const baseUrl = "https://api.data.gov.in/resource/9ef84281-2a12-4174-a7bf-3d572bc2178a";
-    const url = `${baseUrl}?api-key=${apiKey}&format=json&limit=10&filters[state]=${encodeURIComponent(state)}&filters[district]=${encodeURIComponent(district)}&filters[market]=${encodeURIComponent(market)}&filters[commodity]=${encodeURIComponent(crop)}`;
-    
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error("Gov API response error");
-    }
-    const data = await response.json();
-    
-    if (data.records && data.records.length > 0) {
-      const record = data.records[0]; // grab first match
-      return {
-        isMock: false,
-        min: parseFloat(record.min_price) || 0,
-        max: parseFloat(record.max_price) || 0,
-        modal: parseFloat(record.modal_price) || 0,
-        unit: "Quintal",
-        currency: "INR"
-      };
-    } else {
-      throw new Error("No records found in API for selected filters");
+    } catch (e) {
+      console.warn("Backend proxy fetch failed, falling back to mock database:", e);
+      return this.getMockMarketPrice(state, district, market, crop);
     }
   }
 
