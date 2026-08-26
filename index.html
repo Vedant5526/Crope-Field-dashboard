@@ -1072,21 +1072,38 @@
           <div class="flex gap-1 bg-slate-100 p-1 rounded-xl">
             <button onclick="app.switchFieldTab('history')" id="ftab-history"
               class="field-tab-btn flex-1 py-1.5 text-[11px] font-bold rounded-lg transition bg-white text-slate-800 shadow-sm">
-              📋 Crop History
+              📋 Crops
+            </button>
+            <button onclick="app.switchFieldTab('logs')" id="ftab-logs"
+              class="field-tab-btn flex-1 py-1.5 text-[11px] font-bold rounded-lg transition text-slate-500">
+              📓 History & Logs
             </button>
             <button onclick="app.switchFieldTab('sensor')" id="ftab-sensor"
               class="field-tab-btn flex-1 py-1.5 text-[11px] font-bold rounded-lg transition text-slate-500">
-              📡 Sensor Log
+              📡 Sensors
             </button>
             <button onclick="app.switchFieldTab('activity')" id="ftab-activity"
               class="field-tab-btn flex-1 py-1.5 text-[11px] font-bold rounded-lg transition text-slate-500">
-              📝 Add Log Entry
+              📝 Add Log
             </button>
           </div>
 
           <!-- TAB: Crop History -->
           <div id="ftab-panel-history" class="field-tab-panel">
             <ul id="detail-crop-history" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+              <!-- JS injected -->
+            </ul>
+          </div>
+
+          <!-- TAB: History & Logs -->
+          <div id="ftab-panel-logs" class="field-tab-panel hidden">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Field Logbook</span>
+              <button onclick="app.switchFieldTab('activity')" class="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded font-bold transition">
+                + Add Entry
+              </button>
+            </div>
+            <ul id="detail-field-history-logs" class="space-y-2 max-h-64 overflow-y-auto pr-1">
               <!-- JS injected -->
             </ul>
           </div>
