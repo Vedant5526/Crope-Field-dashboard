@@ -299,6 +299,11 @@
         <p class="text-xs text-slate-400">Interactive farming operations monitoring & analysis</p>
       </div>
       <div class="flex items-center space-x-4">
+        <!-- Logged-in user chip -->
+        <div class="hidden sm:flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5">
+          <span class="text-emerald-700 text-sm">&#127807;</span>
+          <span id="user-greeting" class="text-xs font-semibold text-emerald-800">Loading...</span>
+        </div>
         <!-- Notification Icon -->
         <button class="relative w-9 h-9 border border-slate-200 hover:bg-slate-50 transition rounded-xl flex items-center justify-center text-slate-600">
           <i class="fas fa-bell"></i>
@@ -307,6 +312,11 @@
         <!-- Print Shortcut Button -->
         <button onclick="window.print()" class="w-9 h-9 border border-slate-200 hover:bg-slate-50 transition rounded-xl flex items-center justify-center text-slate-600" title="Print/Export Report">
           <i class="fas fa-print"></i>
+        </button>
+        <!-- Logout Button -->
+        <button onclick="window.app && window.app.logout()" class="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-xs font-semibold rounded-xl transition" title="Sign out">
+          <i class="fas fa-sign-out-alt"></i>
+          <span class="hidden sm:inline">Sign Out</span>
         </button>
       </div>
     </header>

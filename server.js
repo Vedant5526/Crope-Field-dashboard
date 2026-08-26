@@ -2,10 +2,14 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
 const path = require('path');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET || 'crop_dashboard_secret_key_2024';
+const SALT_ROUNDS = 10;
 
 // Enable CORS and JSON parsing
 app.use(cors());
@@ -53,6 +57,86 @@ app.use((req, res, next) => {
     return res.status(500).json({ error: 'Database connection is not established. Run MySQL and restart the server.' });
   }
   next();
+});
+
+// ==============================================
+// AUTH SYSTEM
+// ==============================================
+
+// Serve login page
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'login.html'));
+});
+
+// JWT Verification Middleware
+function verifyToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer <token>
+  if (!token) return res.status(401).json({ error: 'Access denied. No token provided.' });
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (e) {
+    return res.status(403).json({ error: 'Invalid or expired token. Please log in again.' });
+  }
+}
+
+// POST /api/auth/register
+app.post('/api/auth/register', async (req, res) => {
+  const { username, password, full_name, role } = req.body;
+  if (!username || !password || !full_name) {
+    return res.status(400).json({ error: 'username, password and full_name are required.' });
+  }
+  try {
+    const hash = await bcrypt.hash(password, SALT_ROUNDS);
+    const userRole = role || 'Farmer';
+    await pool.query(
+      'INSERT INTO users (username, password_hash, full_name, role) VALUES (?, ?, ?, ?)',
+      [username.toLowerCase().trim(), hash, full_name.trim(), userRole]
+    );
+    res.status(201).json({ message: 'Account created successfully. You can now log in.' });
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ error: 'Username already taken. Please choose another.' });
+    }
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/auth/login
+app.post('/api/auth/login', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password are required.' });
+  }
+  try {
+    const [rows] = await pool.query('SELECT * FROM users WHERE username = ?', [username.toLowerCase().trim()]);
+    if (rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid username or password.' });
+    }
+    const user = rows[0];
+    const match = await bcrypt.compare(password, user.password_hash);
+    if (!match) {
+      return res.status(401).json({ error: 'Invalid username or password.' });
+    }
+    // Update last login
+    await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]);
+    // Issue JWT (expires in 8 hours)
+    const token = jwt.sign(
+      { id: user.id, username: user.username, full_name: user.full_name, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '8h' }
+    );
+    res.json({ token, user: { id: user.id, username: user.username, full_name: user.full_name, role: user.role } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/auth/me  (verify token & return user info)
+app.get('/api/auth/me', verifyToken, (req, res) => {
+  res.json({ user: req.user });
 });
 
 // ==============================================

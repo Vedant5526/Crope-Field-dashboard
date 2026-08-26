@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — Crop & Field Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+    * { font-family: "Inter", sans-serif; box-sizing: border-box; }
+    body {
+      background: linear-gradient(135deg, #052e16 0%, #14532d 40%, #166534 70%, #15803d 100%);
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    body::before {
+      content: ""; position: absolute;
+      width: 500px; height: 500px; border-radius: 50%;
+      background: rgba(255,255,255,0.04); top: -150px; right: -150px;
+    }
+    body::after {
+      content: ""; position: absolute;
+      width: 350px; height: 350px; border-radius: 50%;
+      background: rgba(255,255,255,0.04); bottom: -100px; left: -100px;
+    }
+    .card {
+      background: rgba(255,255,255,0.97);
+      backdrop-filter: blur(16px); border-radius: 24px;
+      width: 100%; max-width: 420px; padding: 40px 36px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.4); position: relative; z-index: 10;
+    }
+    .logo-ring {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, #16a34a, #15803d);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 32px; box-shadow: 0 8px 24px rgba(22,163,74,0.4); margin: 0 auto 20px;
+    }
+    .tab-btn {
+      flex: 1; padding: 8px 0; font-size: 13px; font-weight: 600;
+      border-radius: 10px; cursor: pointer; transition: all 0.2s;
+      border: none; background: transparent; color: #6b7280;
+    }
+    .tab-btn.active { background: #16a34a; color: white; box-shadow: 0 2px 8px rgba(22,163,74,0.35); }
+    input, select {
+      width: 100%; padding: 11px 14px; border: 1.5px solid #e5e7eb;
+      border-radius: 12px; font-size: 13.5px; color: #1f2937; outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s; background: #f9fafb;
+    }
+    input:focus, select:focus {
+      border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,0.12); background: white;
+    }
+    .submit-btn {
+      width: 100%; padding: 12px;
+      background: linear-gradient(135deg, #16a34a, #15803d);
+      color: white; font-size: 14px; font-weight: 700;
+      border: none; border-radius: 12px; cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 16px rgba(22,163,74,0.35);
+    }
+    .submit-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(22,163,74,0.45); }
+    .submit-btn:active { transform: translateY(0); }
+    .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .input-icon-wrap { position: relative; }
+    .input-icon {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: #9ca3af; pointer-events: none; font-size: 14px;
+    }
+    .input-icon-wrap input { padding-left: 36px; }
+    .eye-toggle {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 14px; padding: 0;
+    }
+    .alert { padding: 10px 14px; border-radius: 10px; font-size: 12.5px; font-weight: 500; display: none; }
+    .alert.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .alert.success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .alert.show { display: block; }
+    .strength-bar { height: 4px; border-radius: 2px; background: #e5e7eb; overflow: hidden; margin-top: 6px; }
+    .strength-fill { height: 100%; border-radius: 2px; transition: width 0.3s, background 0.3s; width: 0; }
+    .spinner {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.4); border-top-color: white;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      vertical-align: middle; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .leaf { opacity: 0.07; font-size: 80px; position: absolute; user-select: none; }
+  </style>
+</head>
+<body>
+  <span class="leaf" style="top:10%;left:5%;transform:rotate(-30deg)">🌿</span>
+  <span class="leaf" style="bottom:8%;right:6%;transform:rotate(20deg)">🌾</span>
+
+  <div class="card">
+    <div class="logo-ring">🌱</div>
+    <h1 class="text-center text-xl font-extrabold text-slate-800 mb-1">Crop & Field Dashboard</h1>
+    <p class="text-center text-xs text-slate-400 mb-6 font-medium">Maharashtra Agri Management Platform</p>
+
+    <!-- Tabs -->
+    <div class="flex gap-1 bg-slate-100 p-1 rounded-xl mb-5">
+      <button class="tab-btn active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+      <button class="tab-btn" id="tab-register" onclick="switchTab('register')">Create Account</button>
+    </div>
+
+    <div class="alert mb-4" id="alert-box"></div>
+
+    <!-- LOGIN -->
+    <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+      <div>
+        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Username</label>
+        <div class="input-icon-wrap">
+          <span class="input-icon">&#128100;</span>
+          <input type="text" id="login-username" placeholder="Enter your username" required />
+        </div>
+      </div>
+      <div>
+        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Password</label>
+        <div class="input-icon-wrap">
+          <span class="input-icon">&#128274;</span>
+          <input type="password" id="login-password" placeholder="Enter your password" required />
+          <button type="button" class="eye-toggle" onclick="togglePwd('login-password',this)">&#128065;</button>
+        </div>
+      </div>
+      <button type="submit" class="submit-btn mt-2" id="login-btn">Sign In to Dashboard</button>
+    </form>
+
+    <!-- REGISTER -->
+    <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4 hidden">
+      <div>
+        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Full Name</label>
+        <div class="input-icon-wrap">
+          <span class="input-icon">&#129333;</span>
+          <input type="text" id="reg-fullname" placeholder="e.g. Arjun Patil" required />
+        </div>
+      </div>
+      <div>
+        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Username</label>
+        <div class="input-icon-wrap">
+          <span class="input-icon">&#128100;</span>
+          <input type="text" id="reg-username" placeholder="Choose a username" required oninput="this.value=this.value.toLowerCase().replace(/\s/g,'')" />
+        </div>
+      </div>
+      <div>
+        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Role</label>
+        <select id="reg-role">
+          <option value="Farmer">Farmer</option>
+          <option value="Admin">Admin</option>
+          <option value="Viewer">Viewer</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Password</label>
+        <div class="input-icon-wrap">
+          <span class="input-icon">&#128274;</span>
+          <input type="password" id="reg-password" placeholder="Minimum 6 characters" required oninput="checkStrength(this.value)" />
+          <button type="button" class="eye-toggle" onclick="togglePwd('reg-password',this)">&#128065;</button>
+        </div>
+        <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+        <p class="text-[10px] mt-0.5" id="strength-label" style="color:#9ca3af"></p>
+      </div>
+      <div>
+        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Confirm Password</label>
+        <div class="input-icon-wrap">
+          <span class="input-icon">&#128274;</span>
+          <input type="password" id="reg-confirm" placeholder="Re-enter password" required />
+        </div>
+      </div>
+      <button type="submit" class="submit-btn mt-2" id="register-btn">Create My Account</button>
+    </form>
+
+    <p class="text-center text-[11px] text-slate-400 mt-5">Crop & Field Dashboard &copy; 2026 &nbsp;&middot;&nbsp; Maharashtra APMC</p>
+  </div>
+
+<script>
+  function switchTab(tab) {
+    clearAlert();
+    var isLogin = tab === 'login';
+    document.getElementById('login-form').classList.toggle('hidden', !isLogin);
+    document.getElementById('register-form').classList.toggle('hidden', isLogin);
+    document.getElementById('tab-login').classList.toggle('active', isLogin);
+    document.getElementById('tab-register').classList.toggle('active', !isLogin);
+  }
+
+  function showAlert(msg, type) {
+    var el = document.getElementById('alert-box');
+    el.textContent = msg;
+    el.className = 'alert ' + (type || 'error') + ' show';
+  }
+  function clearAlert() {
+    document.getElementById('alert-box').className = 'alert';
+  }
+
+  function togglePwd(id, btn) {
+    var inp = document.getElementById(id);
+    if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+    else { inp.type = 'password'; btn.textContent = '👁'; }
+  }
+
+  function checkStrength(val) {
+    var score = 0;
+    if (val.length >= 6) score++;
+    if (val.length >= 10) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+    var pcts = ['0%','20%','40%','60%','85%','100%'];
+    var colors = ['','#ef4444','#f97316','#eab308','#22c55e','#16a34a'];
+    var labels = ['','Weak','Fair','Good','Strong','Very Strong'];
+    document.getElementById('strength-fill').style.width = pcts[score];
+    document.getElementById('strength-fill').style.background = colors[score] || '#e5e7eb';
+    var lbl = document.getElementById('strength-label');
+    lbl.textContent = score > 0 ? 'Strength: ' + labels[score] : '';
+    lbl.style.color = colors[score] || '#9ca3af';
+  }
+
+  function setLoading(id, loading, txt) {
+    var btn = document.getElementById(id);
+    btn.disabled = loading;
+    btn.innerHTML = loading ? '<span class="spinner"></span>' + txt : txt;
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault(); clearAlert();
+    var username = document.getElementById('login-username').value.trim();
+    var password = document.getElementById('login-password').value;
+    if (!username || !password) return showAlert('Please fill in all fields.');
+    setLoading('login-btn', true, 'Signing in...');
+    try {
+      var res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username, password: password })
+      });
+      var data = await res.json();
+      if (!res.ok) { showAlert(data.error || 'Login failed.'); return; }
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('auth_user', JSON.stringify(data.user));
+      showAlert('Welcome back, ' + data.user.full_name + '! Redirecting...', 'success');
+      setTimeout(function() { window.location.href = '/'; }, 900);
+    } catch(err) {
+      showAlert('Server error. Make sure the server is running.');
+    } finally {
+      setLoading('login-btn', false, 'Sign In to Dashboard');
+    }
+  }
+
+  async function handleRegister(e) {
+    e.preventDefault(); clearAlert();
+    var full_name = document.getElementById('reg-fullname').value.trim();
+    var username  = document.getElementById('reg-username').value.trim();
+    var role      = document.getElementById('reg-role').value;
+    var password  = document.getElementById('reg-password').value;
+    var confirm   = document.getElementById('reg-confirm').value;
+    if (!full_name || !username || !password || !confirm) return showAlert('Please fill in all fields.');
+    if (password.length < 6) return showAlert('Password must be at least 6 characters.');
+    if (password !== confirm) return showAlert('Passwords do not match.');
+    setLoading('register-btn', true, 'Creating account...');
+    try {
+      var res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username, password: password, full_name: full_name, role: role })
+      });
+      var data = await res.json();
+      if (!res.ok) { showAlert(data.error || 'Registration failed.'); return; }
+      showAlert('Account created! Switching to sign-in...', 'success');
+      setTimeout(function() {
+        switchTab('login');
+        document.getElementById('login-username').value = username;
+      }, 1200);
+    } catch(err) {
+      showAlert('Server error. Make sure the server is running.');
+    } finally {
+      setLoading('register-btn', false, 'Create My Account');
+    }
+  }
+
+  // Auto-redirect if already logged in
+  (function() {
+    var token = localStorage.getItem('auth_token');
+    if (!token) return;
+    fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
+      .then(function(r) { if (r.ok) window.location.href = '/'; })
+      .catch(function() {});
+  })();
+</script>
+</body>
+</html>

@@ -150,4 +150,15 @@ VALUES
 -- Seed Price Alerts
 INSERT INTO price_alerts (id, crop, targetPrice, alert_condition, state, district, mandi, isTriggered, dateCreated)
 VALUES
-('alert-1', 'Wheat', 2150.00, 'above', 'Maharashtra', 'Pune', 'Pune Mandi', TRUE, '2026-08-25');
+('alert-1', 'Wheat', 2150.00, 'above', 'Maharashtra', 'Pune', 'Pune APMC', TRUE, '2026-08-25');
+
+-- 9. USERS Table (Authentication)
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(50) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  full_name VARCHAR(100) NOT NULL,
+  role VARCHAR(30) DEFAULT 'Farmer',   -- 'Farmer' | 'Admin' | 'Viewer'
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  last_login DATETIME
+);

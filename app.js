@@ -10,7 +10,39 @@ class App {
     this.activeCropId = null;
   }
 
+  // ── Auth helpers ──────────────────────────────────
+  getAuthToken() { return localStorage.getItem('auth_token') || ''; }
+  getAuthUser()  { try { return JSON.parse(localStorage.getItem('auth_user') || 'null'); } catch(e) { return null; } }
+
+  async checkAuth() {
+    const token = this.getAuthToken();
+    if (!token) { window.location.href = '/login'; return false; }
+    try {
+      const res = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (!res.ok) { this.logout(); return false; }
+    } catch(e) { /* server unreachable — allow offline */ }
+    return true;
+  }
+
+  logout() {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    window.location.href = '/login';
+  }
+
+  // ── Inject auth token into all API calls ──────────
+  async apiFetch(url, options) {
+    options = options || {};
+    options.headers = options.headers || {};
+    options.headers['Authorization'] = 'Bearer ' + this.getAuthToken();
+    return fetch(url, options);
+  }
+
   async init() {
+    // Guard: redirect to login if not authenticated
+    const authed = await this.checkAuth();
+    if (!authed) return;
+
     await this.loadSettings();
     if (window.sensorManager) {
       await window.sensorManager.initDatabase();
@@ -19,6 +51,13 @@ class App {
     this.setupEventListeners();
     await this.refreshAllData();
     
+    // Show logged-in user greeting
+    const user = this.getAuthUser();
+    if (user) {
+      const greeting = document.getElementById('user-greeting');
+      if (greeting) greeting.textContent = user.full_name + ' (' + user.role + ')';
+    }
+
     // Initialize charts on start
     await window.chartManager.renderAllCharts();
     await this.updateWeatherForFirstField();
