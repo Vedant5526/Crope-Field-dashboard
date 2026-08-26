@@ -861,11 +861,15 @@ class App {
 
     if (!stateSelect) return;
 
-    // Load states
+    // Load states — default to Maharashtra
     const mandisData = window.marketPriceManager.mockMandis;
     const states = Object.keys(mandisData);
     
     stateSelect.innerHTML = states.map(s => `<option value="${s}">${s}</option>`).join("");
+    // Pre-select Maharashtra as it has the richest APMC data
+    if (states.includes("Maharashtra")) {
+      stateSelect.value = "Maharashtra";
+    }
 
     // Populate districts based on state
     const populateDistricts = () => {

@@ -483,6 +483,83 @@ app.post('/api/reset', async (req, res) => {
   }
 });
 
+// ── Maharashtra APMC Mandis Directory ─────────────────────────────────────────
+// Returns structured list of all Maharashtra districts → mandis → commodity prices.
+// Tries data.gov.in live data first; falls back to built-in APMC reference table.
+const MAHARASHTRA_APMC = {
+  "Pune":       ["Pune APMC"],
+  "Nashik":     ["Lasalgaon APMC", "Nashik APMC", "Niphad APMC"],
+  "Nanded":     ["Nanded APMC", "Dharmabad APMC"],
+  "Aurangabad": ["Aurangabad APMC", "Paithan APMC"],
+  "Latur":      ["Latur APMC", "Ahmedpur APMC"],
+  "Ahmednagar": ["Rahuri APMC", "Sangamner APMC"],
+  "Solapur":    ["Solapur APMC", "Barshi APMC"],
+  "Kolhapur":   ["Kolhapur APMC"],
+  "Satara":     ["Satara APMC"],
+  "Sangli":     ["Sangli APMC"],
+  "Akola":      ["Akola APMC"],
+  "Amravati":   ["Amravati APMC"],
+  "Nagpur":     ["Nagpur APMC", "Wardha APMC"]
+};
+
+const MH_COMMODITIES = ["Wheat", "Rice", "Soybeans", "Maize", "Cotton", "Onion",
+                        "Tur (Pigeon Peas)", "Tomato", "Grapes", "Turmeric", "Sugarcane"];
+
+app.get('/api/maharashtra-mandis', async (req, res) => {
+  try {
+    // 1. Fetch API key
+    const [rows] = await pool.query('SELECT gov_api_key FROM settings WHERE id = 1').catch(() => [[]]);
+    let apiKey = rows.length > 0 && rows[0].gov_api_key ? rows[0].gov_api_key.trim() : '';
+    if (!apiKey) apiKey = process.env.GOV_API_KEY || '';
+
+    const resourceId = '9ef84281-2a12-4174-a7bf-3d572bc2178a';
+    let liveRecords = [];
+
+    if (apiKey) {
+      // Fetch last 50 records from data.gov.in for state=Maharashtra
+      const url = `https://api.data.gov.in/resource/${resourceId}?api-key=${apiKey}&format=json&limit=50&filters[state]=Maharashtra`;
+      try {
+        const apiRes = await fetch(url);
+        if (apiRes.ok) {
+          const apiData = await apiRes.json();
+          liveRecords = apiData.records || [];
+        }
+      } catch (_) { /* fall through to static */ }
+    }
+
+    // Build structured response
+    const result = {};
+    for (const [district, mandis] of Object.entries(MAHARASHTRA_APMC)) {
+      result[district] = {};
+      for (const mandi of mandis) {
+        // Try to find a live record matching this mandi
+        const matched = liveRecords.filter(r =>
+          r.market && r.market.toLowerCase().includes(mandi.split(' ')[0].toLowerCase())
+        );
+        result[district][mandi] = {
+          isLive: matched.length > 0,
+          prices: matched.length > 0
+            ? matched.map(r => ({
+                commodity: r.commodity,
+                variety: r.variety,
+                min: parseFloat(r.min_price) || 0,
+                max: parseFloat(r.max_price) || 0,
+                modal: parseFloat(r.modal_price) || 0,
+                date: r.arrival_date,
+                unit: "Quintal",
+                currency: "INR"
+              }))
+            : MH_COMMODITIES.map(c => ({ commodity: c, isStaticFallback: true }))
+        };
+      }
+    }
+
+    res.json({ state: "Maharashtra", districts: result, isLive: liveRecords.length > 0 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Proxy endpoint for Gov Mandi Prices (Variety-wise Daily Market Prices from data.gov.in)
 app.get('/api/external/mandi-price', async (req, res) => {
   const { state, district, market, crop } = req.query;
@@ -505,9 +582,14 @@ app.get('/api/external/mandi-price', async (req, res) => {
       return res.json({ isMock: true, reason: 'No API key configured. Provide OGD API key in Settings.' });
     }
 
+    // Normalize commodity names for OGD / data.gov.in literal matches
+    let targetCrop = crop;
+    if (crop === 'Soybeans') targetCrop = 'Soyabean';
+    else if (crop === 'Rice') targetCrop = 'Paddy(Common)';
+
     // data.gov.in Agmarknet Variety Daily Market Prices Resource ID
     const resourceId = '9ef84281-2a12-4174-a7bf-3d572bc2178a';
-    const url = `https://api.data.gov.in/resource/${resourceId}?api-key=${apiKey}&format=json&limit=10&filters[state]=${encodeURIComponent(state)}&filters[district]=${encodeURIComponent(district)}&filters[market]=${encodeURIComponent(market)}&filters[commodity]=${encodeURIComponent(crop)}`;
+    const url = `https://api.data.gov.in/resource/${resourceId}?api-key=${apiKey}&format=json&limit=10&filters[state]=${encodeURIComponent(state)}&filters[district]=${encodeURIComponent(district)}&filters[market]=${encodeURIComponent(market)}&filters[commodity]=${encodeURIComponent(targetCrop)}`;
 
     const response = await fetch(url);
     if (!response.ok) {

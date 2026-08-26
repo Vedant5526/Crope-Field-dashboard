@@ -1,24 +1,156 @@
 // Indian Mandi Market Price Checker Module (MySQL Backend Version)
 class MarketPriceManager {
   constructor() {
-    // Seed initial mock market data (Comprehensive Indian Mandis)
+    // Comprehensive Maharashtra APMC Mandi Data (real districts & yards, realistic prices)
     this.mockMandis = {
       "Maharashtra": {
         "Pune": {
-          "Pune Mandi": {
+          "Pune APMC": {
             "Wheat": { min: 2100, max: 2300, modal: 2200 },
             "Rice": { min: 2250, max: 2500, modal: 2380 },
             "Soybeans": { min: 4200, max: 4600, modal: 4400 },
             "Maize": { min: 1800, max: 2100, modal: 1950 },
-            "Cotton": { min: 6800, max: 7400, modal: 7100 }
+            "Cotton": { min: 6800, max: 7400, modal: 7100 },
+            "Onion": { min: 800, max: 1600, modal: 1200 }
+          }
+        },
+        "Nashik": {
+          "Lasalgaon APMC": {
+            "Onion": { min: 600, max: 2200, modal: 1400 },
+            "Wheat": { min: 2050, max: 2280, modal: 2160 },
+            "Maize": { min: 1750, max: 2000, modal: 1870 },
+            "Soybeans": { min: 4050, max: 4500, modal: 4250 },
+            "Tomato": { min: 400, max: 1800, modal: 900 }
+          },
+          "Nashik APMC": {
+            "Onion": { min: 700, max: 2100, modal: 1350 },
+            "Wheat": { min: 2080, max: 2290, modal: 2190 },
+            "Rice": { min: 2200, max: 2450, modal: 2310 },
+            "Maize": { min: 1760, max: 2010, modal: 1880 },
+            "Grapes": { min: 3500, max: 8000, modal: 5500 }
+          },
+          "Niphad APMC": {
+            "Onion": { min: 650, max: 2000, modal: 1300 },
+            "Wheat": { min: 2000, max: 2250, modal: 2120 },
+            "Grapes": { min: 3800, max: 8500, modal: 6000 }
           }
         },
         "Nanded": {
-          "Nanded Mandi": {
+          "Nanded APMC": {
             "Wheat": { min: 2050, max: 2250, modal: 2150 },
             "Rice": { min: 2150, max: 2400, modal: 2280 },
             "Soybeans": { min: 4100, max: 4500, modal: 4320 },
-            "Cotton": { min: 6900, max: 7500, modal: 7250 }
+            "Cotton": { min: 6900, max: 7500, modal: 7250 },
+            "Maize": { min: 1700, max: 2050, modal: 1870 }
+          },
+          "Dharmabad APMC": {
+            "Soybeans": { min: 4000, max: 4450, modal: 4200 },
+            "Cotton": { min: 6800, max: 7450, modal: 7100 },
+            "Wheat": { min: 2000, max: 2200, modal: 2100 }
+          }
+        },
+        "Aurangabad": {
+          "Aurangabad APMC": {
+            "Wheat": { min: 2020, max: 2250, modal: 2140 },
+            "Soybeans": { min: 4080, max: 4480, modal: 4280 },
+            "Cotton": { min: 6750, max: 7350, modal: 7050 },
+            "Onion": { min: 750, max: 1700, modal: 1200 },
+            "Maize": { min: 1680, max: 2000, modal: 1840 }
+          },
+          "Paithan APMC": {
+            "Soybeans": { min: 3980, max: 4420, modal: 4200 },
+            "Cotton": { min: 6700, max: 7300, modal: 7000 }
+          }
+        },
+        "Latur": {
+          "Latur APMC": {
+            "Soybeans": { min: 4050, max: 4500, modal: 4280 },
+            "Tur (Pigeon Peas)": { min: 5500, max: 7000, modal: 6200 },
+            "Cotton": { min: 6850, max: 7500, modal: 7200 },
+            "Wheat": { min: 2010, max: 2220, modal: 2110 },
+            "Onion": { min: 700, max: 1600, modal: 1150 }
+          },
+          "Ahmedpur APMC": {
+            "Soybeans": { min: 4000, max: 4480, modal: 4240 },
+            "Tur (Pigeon Peas)": { min: 5400, max: 6900, modal: 6100 }
+          }
+        },
+        "Ahmednagar": {
+          "Rahuri APMC": {
+            "Onion": { min: 600, max: 1900, modal: 1200 },
+            "Wheat": { min: 2000, max: 2230, modal: 2100 },
+            "Maize": { min: 1650, max: 1980, modal: 1820 }
+          },
+          "Sangamner APMC": {
+            "Onion": { min: 550, max: 1850, modal: 1150 },
+            "Wheat": { min: 1980, max: 2200, modal: 2080 },
+            "Soybeans": { min: 4000, max: 4450, modal: 4200 }
+          }
+        },
+        "Solapur": {
+          "Solapur APMC": {
+            "Tur (Pigeon Peas)": { min: 5600, max: 7200, modal: 6400 },
+            "Wheat": { min: 2030, max: 2240, modal: 2130 },
+            "Soybeans": { min: 4100, max: 4520, modal: 4310 },
+            "Cotton": { min: 6780, max: 7380, modal: 7080 },
+            "Onion": { min: 720, max: 1700, modal: 1200 }
+          },
+          "Barshi APMC": {
+            "Tur (Pigeon Peas)": { min: 5500, max: 7100, modal: 6300 },
+            "Soybeans": { min: 4050, max: 4500, modal: 4260 }
+          }
+        },
+        "Kolhapur": {
+          "Kolhapur APMC": {
+            "Rice": { min: 2200, max: 2550, modal: 2360 },
+            "Soybeans": { min: 4100, max: 4550, modal: 4320 },
+            "Maize": { min: 1750, max: 2050, modal: 1900 },
+            "Sugarcane": { min: 280, max: 310, modal: 295 }
+          }
+        },
+        "Satara": {
+          "Satara APMC": {
+            "Wheat": { min: 2050, max: 2280, modal: 2160 },
+            "Soybeans": { min: 4080, max: 4480, modal: 4270 },
+            "Maize": { min: 1700, max: 2030, modal: 1850 },
+            "Onion": { min: 680, max: 1650, modal: 1150 }
+          }
+        },
+        "Sangli": {
+          "Sangli APMC": {
+            "Tur (Pigeon Peas)": { min: 5500, max: 7100, modal: 6200 },
+            "Soybeans": { min: 4050, max: 4480, modal: 4250 },
+            "Onion": { min: 650, max: 1700, modal: 1200 },
+            "Turmeric": { min: 6000, max: 9000, modal: 7500 }
+          }
+        },
+        "Akola": {
+          "Akola APMC": {
+            "Cotton": { min: 6700, max: 7400, modal: 7050 },
+            "Soybeans": { min: 4000, max: 4450, modal: 4220 },
+            "Wheat": { min: 2000, max: 2220, modal: 2100 },
+            "Tur (Pigeon Peas)": { min: 5400, max: 6900, modal: 6100 }
+          }
+        },
+        "Amravati": {
+          "Amravati APMC": {
+            "Cotton": { min: 6750, max: 7450, modal: 7100 },
+            "Soybeans": { min: 4050, max: 4500, modal: 4270 },
+            "Wheat": { min: 2010, max: 2230, modal: 2110 },
+            "Tur (Pigeon Peas)": { min: 5450, max: 7000, modal: 6200 }
+          }
+        },
+        "Nagpur": {
+          "Nagpur APMC": {
+            "Cotton": { min: 6750, max: 7450, modal: 7100 },
+            "Soybeans": { min: 4080, max: 4500, modal: 4270 },
+            "Wheat": { min: 2030, max: 2250, modal: 2130 },
+            "Rice": { min: 2200, max: 2480, modal: 2340 },
+            "Maize": { min: 1750, max: 2050, modal: 1900 }
+          },
+          "Wardha APMC": {
+            "Cotton": { min: 6700, max: 7400, modal: 7050 },
+            "Soybeans": { min: 4000, max: 4460, modal: 4220 }
           }
         }
       },
@@ -102,7 +234,13 @@ class MarketPriceManager {
       "Rice": { min: 2200, max: 2600, modal: 2400 },
       "Soybeans": { min: 4100, max: 4550, modal: 4350 },
       "Maize": { min: 1800, max: 2100, modal: 1950 },
-      "Cotton": { min: 6800, max: 7500, modal: 7150 }
+      "Cotton": { min: 6800, max: 7500, modal: 7150 },
+      "Onion": { min: 600, max: 2200, modal: 1400 },
+      "Tur (Pigeon Peas)": { min: 5500, max: 7200, modal: 6200 },
+      "Tomato": { min: 400, max: 1800, modal: 900 },
+      "Grapes": { min: 3500, max: 8500, modal: 5800 },
+      "Turmeric": { min: 6000, max: 9000, modal: 7500 },
+      "Sugarcane": { min: 280, max: 310, modal: 295 }
     };
     const price = defaults[crop] || { min: 1500, max: 1800, modal: 1650 };
     return {
