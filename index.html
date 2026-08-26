@@ -15,10 +15,7 @@
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
-  <!-- Leaflet CSS & JS CDN -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  
+
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
@@ -267,10 +264,6 @@
           <i class="fas fa-wheat-awn w-5 text-center text-lg"></i>
           <span>Crops</span>
         </a>
-        <a href="#" data-target-view="activities" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 transition">
-          <i class="fas fa-list-check w-5 text-center text-lg"></i>
-          <span>Activities</span>
-        </a>
         <a href="#" data-target-view="market" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 transition">
           <i class="fas fa-coins w-5 text-center text-lg"></i>
           <span>Market Prices</span>
@@ -403,42 +396,22 @@
           </div>
         </div>
 
-        <!-- MAIN OVERVIEW SECTION (MAPS / ACTIVITIES / WEATHER) -->
+        <!-- MAIN OVERVIEW SECTION (WEATHER & TASKS) -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          <!-- MAP CONTAINER + TASKS -->
-          <div class="lg:col-span-2 space-y-6">
-            
-            <!-- Leaflet Interactive Map -->
-            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col">
-              <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center space-x-2">
-                  <i class="fas fa-map-location-dot text-emerald-600 text-lg"></i>
-                  <h3 class="font-extrabold text-slate-800 text-sm">Interactive Fields Map</h3>
-                </div>
-                <span class="text-[10px] text-slate-400 italic">Click fields to view crop details & action options</span>
-              </div>
-              
-              <!-- Map Canvas -->
-              <div id="overview-map" class="leaflet-map-container"></div>
-            </div>
-
-            <!-- Recent/Upcoming Tasks Logs -->
-            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-              <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
-                <div class="flex items-center space-x-2">
-                  <i class="fas fa-calendar-days text-slate-600 text-lg"></i>
-                  <h3 class="font-extrabold text-slate-800 text-sm">Operational Task Schedule</h3>
-                </div>
-                <button onclick="app.switchView('activities')" class="text-xs font-bold text-emerald-600 hover:text-emerald-700">View All Logs &rarr;</button>
-              </div>
-
-              <!-- List container -->
-              <div id="upcoming-activities-list" class="flex flex-col space-y-3">
-                <!-- Injected via JavaScript -->
+          <!-- Recent/Upcoming Tasks Logs -->
+          <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+              <div class="flex items-center space-x-2">
+                <i class="fas fa-calendar-days text-slate-600 text-lg"></i>
+                <h3 class="font-extrabold text-slate-800 text-sm">Operational Task Schedule</h3>
               </div>
             </div>
 
+            <!-- List container -->
+            <div id="upcoming-activities-list" class="flex flex-col space-y-3">
+              <!-- Injected via JavaScript -->
+            </div>
           </div>
 
           <!-- WEATHER WIDGET SIDE PANEL -->
@@ -513,49 +486,7 @@
         </div>
       </section>
 
-      <!-- ============================================== -->
-      <!-- VIEW: ACTIVITIES -->
-      <!-- ============================================== -->
-      <section id="activities-view" class="view-section space-y-6">
-        <div class="flex justify-between items-center">
-          <div>
-            <h1 class="text-2xl font-black text-slate-800">Agricultural Activities & Cost Logs</h1>
-            <p class="text-sm text-slate-500">Record irrigation, fertilizer application, weeding, and pesticides</p>
-          </div>
-          <button onclick="app.showAddActivityModal()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center space-x-2">
-            <i class="fas fa-plus-circle"></i>
-            <span>Log Daily Activity</span>
-          </button>
-        </div>
-
-        <!-- Activity History Card -->
-        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-          <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 class="font-extrabold text-slate-800 text-sm">Farm Operations Register</h3>
-            <span class="text-xs text-slate-400">Expenditures are compiled dynamically in reports</span>
-          </div>
-
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-              <thead>
-                <tr class="border-b border-slate-200 bg-slate-50 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-                  <th class="px-6 py-3.5">Log Date</th>
-                  <th class="px-6 py-3.5">Field Area</th>
-                  <th class="px-6 py-3.5">Activity Type</th>
-                  <th class="px-6 py-3.5">Application details</th>
-                  <th class="px-6 py-3.5 role-finance">Cost Value ($)</th>
-                  <th class="px-6 py-3.5 text-right">Delete</th>
-                </tr>
-              </thead>
-              <tbody id="activities-table-body" class="divide-y divide-slate-100">
-                <!-- Injected via JS -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- ============================================== -->
+<!-- ============================================== -->
       <!-- VIEW: MARKET PRICES -->
       <!-- ============================================== -->
       <section id="market-view" class="view-section space-y-6">
@@ -927,23 +858,16 @@
             <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Area (Acres)</label>
             <input id="field-area" type="number" step="0.1" placeholder="e.g. 10" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
           </div>
-          <!-- Latitude picker (read only or input) -->
+          <!-- Latitude input -->
           <div>
             <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Latitude</label>
-            <input id="field-lat" type="number" step="0.000001" placeholder="Click map below" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" readonly>
+            <input id="field-lat" type="number" step="0.000001" placeholder="e.g. 18.5204" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
           </div>
-          <!-- Longitude picker -->
+          <!-- Longitude input -->
           <div>
             <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Longitude</label>
-            <input id="field-lng" type="number" step="0.000001" placeholder="Click map below" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" readonly>
+            <input id="field-lng" type="number" step="0.000001" placeholder="e.g. 73.8567" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
           </div>
-        </div>
-
-        <!-- Coordinates Picker Map -->
-        <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Interactive GPS Location Pin</label>
-          <p class="text-[10px] text-slate-400 mb-2">Select the approximate location on the map below. A boundary area will be computed based on acres.</p>
-          <div id="field-picker-map"></div>
         </div>
 
         <div class="pt-4 border-t border-slate-100 flex justify-end space-x-2">
@@ -1011,67 +935,6 @@
         </div>
       </form>
     </div>
-  </div>
-
-  <!-- ============================================== -->
-  <!-- MODAL: LOG ACTIVITY -->
-  <!-- ============================================== -->
-  <div id="add-activity-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
-      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-        <h3 class="font-black text-slate-800 text-base">Record Operational Activity</h3>
-        <button onclick="app.closeModal('add-activity-modal')" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fas fa-times"></i></button>
-      </div>
-
-      <form id="add-activity-form" class="p-6 space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Field select -->
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Target Field</label>
-            <select id="act-field-select" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
-              <!-- Loaded via JS -->
-            </select>
-          </div>
-          <!-- Activity Type -->
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Activity Type</label>
-            <select id="act-type" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
-              <option value="Irrigation">Irrigation</option>
-              <option value="Fertilizer">Fertilizer Application</option>
-              <option value="Pesticide">Pesticide Spray</option>
-              <option value="Weeding">Weeding / Interculture</option>
-              <option value="Soil Test">Soil Testing</option>
-              <option value="Pruning">Pruning/Clearing</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Log Date -->
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Execution Date</label>
-            <input id="act-date" type="date" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
-          </div>
-          <!-- Expenditure Cost -->
-          <div class="role-finance">
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Associated Cost ($)</label>
-            <input id="act-cost" type="number" placeholder="e.g. 150" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
-          </div>
-        </div>
-
-        <!-- Description Details -->
-        <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Activity Description / Quantities</label>
-          <textarea id="act-details" placeholder="e.g. Urea application 50kg, sprinkler running time etc." rows="3" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></textarea>
-        </div>
-
-        <div class="pt-4 border-t border-slate-100 flex justify-end space-x-2">
-          <button type="button" onclick="app.closeModal('add-activity-modal')" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition">Cancel</button>
-          <button type="submit" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition">Log Activity</button>
-        </div>
-      </form>
-    </div>
-  </div>
 
   <!-- ============================================== -->
   <!-- MODAL: UPDATE GROWTH STAGE -->
@@ -1225,16 +1088,6 @@
             </ul>
           </div>
 
-          <!-- Activity logs list -->
-          <div>
-            <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2 flex items-center space-x-1.5">
-              <i class="fas fa-list-check text-slate-400"></i>
-              <span>Recent Activity Logs</span>
-            </h4>
-            <ul id="detail-activities-log" class="space-y-2 max-h-48 overflow-y-auto pr-1">
-              <!-- JS Injections -->
-            </ul>
-          </div>
         </div>
 
       </div>
@@ -1248,7 +1101,6 @@
   <!-- SCRIPTS LOADINGS -->
   <script src="mockData.js"></script>
   <script src="weather.js"></script>
-  <script src="map.js"></script>
   <script src="market.js"></script>
   <script src="sensors.js"></script>
   <script src="charts.js"></script>

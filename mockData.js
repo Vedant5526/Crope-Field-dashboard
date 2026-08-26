@@ -93,56 +93,7 @@ const DEFAULT_MOCK_DATA = {
       notes: "Pods filled nicely. Harvest scheduled next week."
     }
   ],
-  activities: [
-    {
-      id: "a1",
-      field_id: "f1",
-      type: "Fertilizer",
-      date: "2026-06-25",
-      details: "NPK (19:19:19) application - 120 kg. Manual spreading.",
-      cost: 450
-    },
-    {
-      id: "a2",
-      field_id: "f2",
-      type: "Irrigation",
-      date: "2026-08-20",
-      details: "Drip irrigation run, 6 hours. High volume water channel.",
-      cost: 150
-    },
-    {
-      id: "a3",
-      field_id: "f3",
-      type: "Pesticide",
-      date: "2026-07-10",
-      details: "Neem oil organic spray for aphids control. Favorable results.",
-      cost: 220
-    },
-    {
-      id: "a4",
-      field_id: "f1",
-      type: "Weeding",
-      date: "2026-07-02",
-      details: "Manual inter-cultivation weeding by local laborers.",
-      cost: 300
-    },
-    {
-      id: "a5",
-      field_id: "f2",
-      type: "Soil Test",
-      date: "2026-05-02",
-      details: "Soil test report: pH 6.8, Organic Carbon: Moderate. Recommended extra Nitrogen.",
-      cost: 100
-    },
-    {
-      id: "a6",
-      field_id: "f1",
-      type: "Irrigation",
-      date: "2026-08-24",
-      details: "Automated sprinklers activated for 4 hours.",
-      cost: 120
-    }
-  ],
+  activities: [],
   yields: [
     {
       id: "y1",

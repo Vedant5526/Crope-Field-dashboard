@@ -15,16 +15,13 @@ class App {
     this.setupViewRouter();
     this.setupEventListeners();
     this.renderOverviewStats();
-    this.renderUpcomingActivities();
     
     // Render initial views
     this.renderFieldsList();
     this.renderCropsList();
-    this.renderActivitiesList();
     this.renderPriceAlerts();
     
     // Initialize maps and charts on start
-    window.farmMapManager.initOverviewMap();
     window.chartManager.renderAllCharts();
     this.updateWeatherForFirstField();
     
@@ -100,7 +97,6 @@ class App {
     // Specific load triggers depending on view
     if (viewName === "overview") {
       setTimeout(() => {
-        window.farmMapManager.initOverviewMap();
         this.updateWeatherForFirstField();
       }, 50);
     } else if (viewName === "reports") {
@@ -190,14 +186,6 @@ class App {
       });
     }
 
-    // Add Activity Form Submit
-    const activityForm = document.getElementById("add-activity-form");
-    if (activityForm) {
-      activityForm.addEventListener("submit", (e) => {
-        e.preventDefault();
-        this.handleAddActivity();
-      });
-    }
 
     // Add Yield Form Submit
     const yieldForm = document.getElementById("add-yield-form");
@@ -223,7 +211,6 @@ class App {
   renderOverviewStats() {
     const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
     const crops = JSON.parse(localStorage.getItem("farm_crops")) || [];
-    const activities = JSON.parse(localStorage.getItem("farm_activities")) || [];
     const yields = JSON.parse(localStorage.getItem("farm_yields")) || [];
 
     // Calculate total area
@@ -232,9 +219,10 @@ class App {
     // Active crops count
     const activeCropsCount = crops.filter(c => c.status !== "Harvested").length;
 
-    // Scheduled activities (due today or future)
-    const todayStr = new Date().toISOString().split("T")[0];
-    const tasksDue = activities.filter(a => a.date >= todayStr).length;
+    // Scheduled activities = active sensor alerts + triggered price alerts
+    const sensorAlertsCount = window.sensorManager ? window.sensorManager.getSensorAlerts().length : 0;
+    const priceAlertsCount = window.marketPriceManager ? window.marketPriceManager.checkAlerts().filter(a => a.isTriggered).length : 0;
+    const tasksDue = sensorAlertsCount + priceAlertsCount;
 
     // Average Yield
     let avgYield = 0;
@@ -255,54 +243,68 @@ class App {
     const container = document.getElementById("upcoming-activities-list");
     if (!container) return;
 
-    const activities = JSON.parse(localStorage.getItem("farm_activities")) || [];
+    const crops = JSON.parse(localStorage.getItem("farm_crops")) || [];
     const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
+    const sensorAlerts = window.sensorManager ? window.sensorManager.getSensorAlerts() : [];
 
-    // Filter upcoming (chronologically latest)
-    const sorted = [...activities].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+    const tasks = [];
 
-    if (sorted.length === 0) {
-      container.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">No tasks recorded yet.</p>`;
+    // 1. Add crop tasks
+    crops.forEach(crop => {
+      const field = fields.find(f => f.id === crop.field_id);
+      const fieldName = field ? field.name : "Unknown Field";
+      if (crop.status === "Ready for Harvest") {
+        tasks.push({
+          type: "Harvest",
+          title: `Harvest Window - ${crop.crop_name}`,
+          details: `Crop in ${fieldName} is fully mature. Log harvest in Crops cycle planner.`,
+          date: crop.harvest_date,
+          icon: "fa-tractor text-orange-500",
+          bg: "bg-orange-50"
+        });
+      } else if (crop.status === "Sown" || crop.status === "Vegetative" || crop.status === "Flowering") {
+        tasks.push({
+          type: "Monitoring",
+          title: `Growth Stage tracking - ${crop.crop_name}`,
+          details: `${crop.crop_name} growing in ${fieldName} is currently in '${crop.status}' stage.`,
+          date: crop.sowing_date,
+          icon: "fa-seedling text-amber-500",
+          bg: "bg-amber-50"
+        });
+      }
+    });
+
+    // 2. Add IoT warnings
+    sensorAlerts.forEach(alert => {
+      tasks.push({
+        type: "Telemetry",
+        title: `${alert.type} Alert: Sensor Warning`,
+        details: alert.message,
+        date: "Real-time",
+        icon: "fa-microchip text-rose-500",
+        bg: "bg-rose-50"
+      });
+    });
+
+    if (tasks.length === 0) {
+      container.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">All systems operational. No active tasks.</p>`;
       return;
     }
 
-    container.innerHTML = sorted.map(act => {
-      const field = fields.find(f => f.id === act.field_id);
-      const fieldName = field ? field.name : "Unknown Field";
-      let icon = "fa-tint text-blue-500";
-      let bg = "bg-blue-50";
-
-      if (act.type === "Fertilizer") {
-        icon = "fa-leaf text-emerald-500";
-        bg = "bg-emerald-50";
-      } else if (act.type === "Pesticide") {
-        icon = "fa-bug text-red-500";
-        bg = "bg-red-50";
-      } else if (act.type === "Weeding") {
-        icon = "fa-seedling text-amber-500";
-        bg = "bg-amber-50";
-      } else if (act.type === "Soil Test") {
-        icon = "fa-flask text-purple-500";
-        bg = "bg-purple-50";
-      } else if (act.type === "Harvesting") {
-        icon = "fa-tractor text-orange-500";
-        bg = "bg-orange-50";
-      }
-
+    container.innerHTML = tasks.map(task => {
       return `
         <div class="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition">
           <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-lg flex items-center justify-center ${bg}">
-              <i class="fas ${icon} text-lg"></i>
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center ${task.bg}">
+              <i class="fas ${task.icon} text-lg"></i>
             </div>
             <div>
-              <h5 class="text-sm font-bold text-slate-800">${act.type} - ${fieldName}</h5>
-              <p class="text-xs text-slate-400">${act.details || "No details provided"}</p>
+              <h5 class="text-sm font-bold text-slate-800">${task.title}</h5>
+              <p class="text-xs text-slate-500">${task.details}</p>
             </div>
           </div>
           <div class="text-right">
-            <span class="text-xs text-slate-500 block font-medium">${act.date}</span>
-            <span class="text-xs font-bold text-slate-800 role-finance">$${act.cost || 0}</span>
+            <span class="text-xs text-slate-500 block font-medium">${task.date}</span>
           </div>
         </div>
       `;
@@ -383,7 +385,6 @@ class App {
   showFieldDetail(fieldId) {
     const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
     const crops = JSON.parse(localStorage.getItem("farm_crops")) || [];
-    const activities = JSON.parse(localStorage.getItem("farm_activities")) || [];
     
     const field = fields.find(f => f.id === fieldId);
     if (!field) return;
@@ -443,25 +444,6 @@ class App {
       }).join("");
     }
 
-    // Build Activities list for this field
-    const fieldActivities = activities.filter(a => a.field_id === fieldId);
-    const actContainer = document.getElementById("detail-activities-log");
-    if (fieldActivities.length === 0) {
-      actContainer.innerHTML = `<li class="text-xs text-slate-400 italic">No activities logged yet.</li>`;
-    } else {
-      actContainer.innerHTML = fieldActivities.map(act => `
-        <li class="p-2 border border-slate-100 rounded-lg bg-white">
-          <div class="flex justify-between items-start">
-            <span class="font-bold text-xs text-slate-700">${act.type}</span>
-            <span class="text-[10px] text-slate-400">${act.date}</span>
-          </div>
-          <p class="text-[10px] text-slate-500 mt-0.5">${act.details}</p>
-          <div class="mt-1 text-right role-finance">
-            <span class="text-[10px] font-bold text-slate-800">Cost: $${act.cost}</span>
-          </div>
-        </li>
-      `).join("");
-    }
 
     // Show Modal
     this.openModal("field-detail-modal");
@@ -475,14 +457,19 @@ class App {
     const lng = parseFloat(document.getElementById("field-lng").value);
 
     if (!name || isNaN(area) || isNaN(lat) || isNaN(lng)) {
-      alert("Please fill all details and click on the map to specify GPS coordinates.");
+      alert("Please fill all details and specify GPS coordinates.");
       return;
     }
 
     const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
     
-    // Generate square coordinates around center latitude/longitude
-    const coordinates = window.farmMapManager.generateFieldPolygon(lat, lng, area);
+    // Mock square coordinates around center latitude/longitude
+    const coordinates = [
+      [lat - 0.001, lng - 0.001],
+      [lat - 0.001, lng + 0.001],
+      [lat + 0.001, lng + 0.001],
+      [lat + 0.001, lng - 0.001]
+    ];
 
     const newField = {
       id: "f" + (Date.now()),
@@ -504,12 +491,11 @@ class App {
     // Redraw and Re-render
     this.renderFieldsList();
     this.renderOverviewStats();
-    window.farmMapManager.drawOverviewFields();
     this.updateWeatherForFirstField();
   }
 
   deleteField(fieldId) {
-    if (!confirm("Are you sure you want to delete this field? All crop records and logged activities will remain but no longer link to this field.")) return;
+    if (!confirm("Are you sure you want to delete this field? All crop records will remain but no longer link to this field.")) return;
 
     let fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
     fields = fields.filter(f => f.id !== fieldId);
@@ -517,7 +503,6 @@ class App {
 
     this.renderFieldsList();
     this.renderOverviewStats();
-    window.farmMapManager.drawOverviewFields();
     this.updateWeatherForFirstField();
   }
 
@@ -638,7 +623,6 @@ class App {
     this.renderCropsList();
     this.renderOverviewStats();
     this.renderFieldsList();
-    window.farmMapManager.drawOverviewFields();
   }
 
   showUpdateStageModal(cropId, currentStage) {
@@ -659,7 +643,6 @@ class App {
       
       this.renderCropsList();
       this.renderFieldsList();
-      window.farmMapManager.drawOverviewFields();
       this.closeModal("update-stage-modal");
     }
   }
@@ -690,7 +673,6 @@ class App {
 
     const crops = JSON.parse(localStorage.getItem("farm_crops")) || [];
     const yields = JSON.parse(localStorage.getItem("farm_yields")) || [];
-    const activities = JSON.parse(localStorage.getItem("farm_activities")) || [];
 
     const crop = crops.find(c => c.id === this.activeCropId);
     if (!crop) return;
@@ -713,22 +695,10 @@ class App {
       cost
     };
 
-    // Auto-log a corresponding harvesting activity
-    const newActivity = {
-      id: "a" + (Date.now()),
-      field_id: crop.field_id,
-      type: "Harvesting",
-      date,
-      details: `Successful harvesting of crop: ${crop.crop_name} (${crop.variety}). Yielded ${quantity} Tons.`,
-      cost: cost
-    };
-
     yields.push(newYield);
-    activities.push(newActivity);
 
     localStorage.setItem("farm_crops", JSON.stringify(crops));
     localStorage.setItem("farm_yields", JSON.stringify(yields));
-    localStorage.setItem("farm_activities", JSON.stringify(activities));
 
     // Reset and Close
     document.getElementById("harvest-form").reset();
@@ -736,11 +706,9 @@ class App {
 
     // Redraw Dashboard
     this.renderCropsList();
-    this.renderActivitiesList();
     this.renderFieldsList();
     this.renderOverviewStats();
     this.renderUpcomingActivities();
-    window.farmMapManager.drawOverviewFields();
     window.chartManager.renderAllCharts();
   }
 
@@ -754,124 +722,8 @@ class App {
     this.renderCropsList();
     this.renderFieldsList();
     this.renderOverviewStats();
-    window.farmMapManager.drawOverviewFields();
   }
 
-  // --- ACTIVITIES CRUD & LISTING ---
-
-  renderActivitiesList() {
-    const tableBody = document.getElementById("activities-table-body");
-    if (!tableBody) return;
-
-    const activities = JSON.parse(localStorage.getItem("farm_activities")) || [];
-    const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
-
-    if (activities.length === 0) {
-      tableBody.innerHTML = `
-        <tr>
-          <td colspan="5" class="text-center py-8 text-slate-400 text-sm">No activity logs recorded.</td>
-        </tr>
-      `;
-      return;
-    }
-
-    // Sort chronologically descending
-    const sorted = [...activities].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    tableBody.innerHTML = sorted.map(act => {
-      const field = fields.find(f => f.id === act.field_id);
-      const fieldName = field ? field.name : "Unknown Field";
-
-      let typeColor = "bg-blue-100 text-blue-800";
-      if (act.type === "Fertilizer") typeColor = "bg-emerald-100 text-emerald-800";
-      else if (act.type === "Pesticide") typeColor = "bg-red-100 text-red-800";
-      else if (act.type === "Weeding") typeColor = "bg-amber-100 text-amber-800";
-      else if (act.type === "Harvesting") typeColor = "bg-orange-100 text-orange-800";
-
-      return `
-        <tr class="border-b border-slate-100 hover:bg-slate-50 transition text-slate-700 text-xs">
-          <td class="px-6 py-4 font-bold text-slate-600">${act.date}</td>
-          <td class="px-6 py-4 font-semibold text-slate-800">${fieldName}</td>
-          <td class="px-6 py-4">
-            <span class="px-2 py-0.5 rounded font-semibold ${typeColor}">${act.type}</span>
-          </td>
-          <td class="px-6 py-4 text-slate-600 font-medium max-w-xs truncate" title="${act.details}">${act.details}</td>
-          <td class="px-6 py-4 font-bold text-slate-800 role-finance">$${act.cost}</td>
-          <td class="px-6 py-4 text-right">
-            <button onclick="app.deleteActivity('${act.id}')" class="text-red-400 hover:text-red-600 transition p-1 role-admin-farmer">
-              <i class="fas fa-trash-alt"></i>
-            </button>
-          </td>
-        </tr>
-      `;
-    }).join("");
-  }
-
-  showAddActivityModal() {
-    const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
-    const select = document.getElementById("act-field-select");
-    if (!select) return;
-
-    if (fields.length === 0) {
-      alert("Please add a field before logging agricultural activities.");
-      return;
-    }
-
-    // Populate Fields Selector
-    select.innerHTML = fields.map(f => `<option value="${f.id}">${f.name}</option>`).join("");
-
-    this.openModal("add-activity-modal");
-  }
-
-  handleAddActivity() {
-    const fieldId = document.getElementById("act-field-select").value;
-    const type = document.getElementById("act-type").value;
-    const date = document.getElementById("act-date").value;
-    const cost = parseFloat(document.getElementById("act-cost").value) || 0;
-    const details = document.getElementById("act-details").value;
-
-    if (!date || !type) {
-      alert("Please fill all required activity inputs.");
-      return;
-    }
-
-    const activities = JSON.parse(localStorage.getItem("farm_activities")) || [];
-
-    const newActivity = {
-      id: "a" + (Date.now()),
-      field_id: fieldId,
-      type,
-      date,
-      details: details || "Regular application.",
-      cost: this.currentRole === "Worker" ? 0 : cost // Workers don't register costs
-    };
-
-    activities.push(newActivity);
-    localStorage.setItem("farm_activities", JSON.stringify(activities));
-
-    // Reset and Close
-    document.getElementById("add-activity-form").reset();
-    this.closeModal("add-activity-modal");
-
-    // Redraw UI
-    this.renderActivitiesList();
-    this.renderOverviewStats();
-    this.renderUpcomingActivities();
-    window.chartManager.renderAllCharts(); // costs changed, update reports
-  }
-
-  deleteActivity(actId) {
-    if (!confirm("Are you sure you want to delete this activity log?")) return;
-
-    let activities = JSON.parse(localStorage.getItem("farm_activities")) || [];
-    activities = activities.filter(a => a.id !== actId);
-    localStorage.setItem("farm_activities", JSON.stringify(activities));
-
-    this.renderActivitiesList();
-    this.renderOverviewStats();
-    this.renderUpcomingActivities();
-    window.chartManager.renderAllCharts();
-  }
 
   // --- SETTINGS FORM ---
 
@@ -898,7 +750,6 @@ class App {
     this.updateWeatherForFirstField();
     
     // Refresh tables showing/hiding cost column
-    this.renderActivitiesList();
     this.renderCropsList();
     this.renderUpcomingActivities();
 
@@ -921,13 +772,6 @@ class App {
     if (modal) {
       modal.classList.remove("hidden");
       modal.classList.add("flex");
-      
-      // Initialize map inside add-field modal specifically
-      if (modalId === "add-field-modal") {
-        setTimeout(() => {
-          window.farmMapManager.initPickerMap();
-        }, 100);
-      }
     }
   }
 
