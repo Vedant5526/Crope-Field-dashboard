@@ -145,13 +145,9 @@ class App {
     
     // Set settings inputs
     const roleSelector = document.getElementById("settings-role");
-    const keyInput = document.getElementById("settings-api-key");
-    const govKeyInput = document.getElementById("settings-gov-key");
     const unitSelector = document.getElementById("settings-unit");
     
     if (roleSelector) roleSelector.value = this.currentRole;
-    if (keyInput) keyInput.value = this.settings.weather_api_key || "";
-    if (govKeyInput) govKeyInput.value = this.settings.gov_api_key || "";
     if (unitSelector) unitSelector.value = this.settings.unit_preference || "Metric";
   }
 
@@ -826,14 +822,13 @@ class App {
 
   async handleSaveSettings() {
     const role = document.getElementById("settings-role").value;
-    const key = document.getElementById("settings-api-key").value;
-    const govKey = document.getElementById("settings-gov-key").value;
     const unit = document.getElementById("settings-unit").value;
 
     const settings = {
       role,
-      weather_api_key: key,
-      gov_api_key: govKey,
+      // Preserve existing API keys (not editable from UI)
+      weather_api_key: this.settings.weather_api_key || "",
+      gov_api_key: this.settings.gov_api_key || "",
       unit_preference: unit,
       weather_lat: 18.5204,
       weather_lng: 73.8567
