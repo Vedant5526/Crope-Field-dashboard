@@ -1,8 +1,8 @@
-// IoT Sensor Integration & Simulation Layer
+// IoT Sensor Integration & Simulation Layer (MySQL Connected Version)
 class SensorManager {
   constructor() {
-    this.readingsKey = "farm_sensor_readings";
-    this.alertsKey = "farm_sensor_alerts";
+    this.cachedReadings = {};
+    this.cachedAlerts = [];
     
     // Threshold envelopes per crop type
     this.cropThresholds = {
@@ -29,21 +29,77 @@ class SensorManager {
     };
   }
 
-  // Pre-seed 24 hours of hourly data for active fields
-  initDatabase() {
-    if (!localStorage.getItem(this.readingsKey)) {
-      const readings = {};
-      const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
+  // Fetch all sensor readings and alerts from backend to populate cache
+  async fetchData() {
+    try {
+      // 1. Fetch readings
+      const resReadings = await fetch('/api/sensor-readings');
+      const readings = await resReadings.json();
       
-      fields.forEach(field => {
-        readings[field.id] = this.generate24hHistory(field.id);
+      const grouped = {};
+      readings.forEach(r => {
+        if (!grouped[r.field_id]) grouped[r.field_id] = [];
+        grouped[r.field_id].push({
+          timestamp: r.timestamp,
+          moisture: parseFloat(r.moisture),
+          soilTemp: parseFloat(r.temp_soil),
+          ambientTemp: parseFloat(r.temp_ambient),
+          humidity: parseFloat(r.humidity_ambient),
+          ph: parseFloat(r.ph)
+        });
       });
+      this.cachedReadings = grouped;
 
-      localStorage.setItem(this.readingsKey, JSON.stringify(readings));
+      // 2. Fetch alerts
+      const resAlerts = await fetch('/api/sensor-alerts');
+      const alerts = await resAlerts.json();
+      this.cachedAlerts = alerts.map(a => ({
+        id: a.id,
+        fieldId: a.field_id,
+        fieldName: a.fieldName || 'Field Block', // filled dynamically or resolved
+        crop: a.crop || 'Crop',
+        type: a.type, // 'Critical' or 'Warning'
+        message: a.message
+      }));
+
+    } catch (e) {
+      console.error("Failed to fetch sensor data from API:", e);
     }
+  }
 
-    if (!localStorage.getItem(this.alertsKey)) {
-      localStorage.setItem(this.alertsKey, JSON.stringify([]));
+  // Pre-seed 24 hours of hourly data for active fields if MySQL database is empty
+  async initDatabase() {
+    await this.fetchData();
+
+    if (Object.keys(this.cachedReadings).length === 0) {
+      console.log("MySQL sensor_readings table is empty. Generating 24h mock seed history...");
+      try {
+        const fieldsRes = await fetch('/api/fields');
+        const fields = await fieldsRes.json();
+        
+        for (const field of fields) {
+          const history = this.generate24hHistory(field.id);
+          for (const item of history) {
+            await fetch('/api/sensor-readings', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                field_id: field.id,
+                timestamp: item.timestamp.replace('T', ' ').substring(0, 19),
+                moisture: item.moisture,
+                temp_soil: item.soilTemp,
+                temp_ambient: item.ambientTemp,
+                humidity_ambient: item.humidity,
+                ph: item.ph
+              })
+            });
+          }
+        }
+        // Repopulate cache
+        await this.fetchData();
+      } catch (e) {
+        console.error("Failed to seed initial sensor readings:", e);
+      }
     }
   }
 
@@ -82,157 +138,170 @@ class SensorManager {
     return history;
   }
 
-  // Fetches readings list
+  // Returns cache readings (synchronous to preserve frontend architecture compatibility)
   getAllReadings() {
-    return JSON.parse(localStorage.getItem(this.readingsKey)) || {};
+    return this.cachedReadings;
   }
 
   getLatestReadings(fieldId) {
-    const all = this.getAllReadings();
-    const history = all[fieldId] || [];
+    const history = this.cachedReadings[fieldId] || [];
     if (history.length > 0) {
       return history[history.length - 1];
     }
-    // Return empty model fallback
     return { moisture: 0, soilTemp: 0, ambientTemp: 0, humidity: 0, ph: 7.0 };
   }
 
   // Fluctuate and append new values to simulate live IoT sensors reporting
-  runTelemetrySimulation() {
-    const allReadings = this.getAllReadings();
-    const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
-    const now = new Date().toISOString();
+  async runTelemetrySimulation() {
+    try {
+      const fieldsRes = await fetch('/api/fields');
+      const fields = await fieldsRes.json();
+      const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
 
-    fields.forEach(field => {
-      let history = allReadings[field.id] || [];
-      if (history.length === 0) {
-        history = this.generate24hHistory(field.id);
+      for (const field of fields) {
+        const history = this.cachedReadings[field.id] || [];
+        const last = history.length > 0 
+          ? history[history.length - 1] 
+          : { moisture: 50, soilTemp: 22, ambientTemp: 26, humidity: 60, ph: 6.8 };
+
+        // Fluctuate slightly
+        const moisture = Math.max(20, Math.min(98, last.moisture + (Math.random() - 0.5) * 2));
+        const soilTemp = Math.max(10, Math.min(40, last.soilTemp + (Math.random() - 0.5) * 0.8));
+        const ambientTemp = Math.max(10, Math.min(45, last.ambientTemp + (Math.random() - 0.5) * 1.2));
+        const humidity = Math.max(15, Math.min(95, last.humidity + (Math.random() - 0.5) * 2.5));
+        const ph = Math.max(4.0, Math.min(9.0, last.ph + (Math.random() - 0.5) * 0.02));
+
+        // Post new reading to MySQL database
+        await fetch('/api/sensor-readings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            field_id: field.id,
+            timestamp: nowStr,
+            moisture: parseFloat(moisture.toFixed(1)),
+            temp_soil: parseFloat(soilTemp.toFixed(1)),
+            temp_ambient: parseFloat(ambientTemp.toFixed(1)),
+            humidity_ambient: parseFloat(humidity.toFixed(1)),
+            ph: parseFloat(ph.toFixed(2))
+          })
+        });
       }
 
-      const last = history[history.length - 1];
-
-      // Fluctuate slightly
-      const moisture = Math.max(20, Math.min(98, last.moisture + (Math.random() - 0.5) * 2));
-      const soilTemp = Math.max(10, Math.min(40, last.soilTemp + (Math.random() - 0.5) * 0.8));
-      const ambientTemp = Math.max(10, Math.min(45, last.ambientTemp + (Math.random() - 0.5) * 1.2));
-      const humidity = Math.max(15, Math.min(95, last.humidity + (Math.random() - 0.5) * 2.5));
-      const ph = Math.max(4.0, Math.min(9.0, last.ph + (Math.random() - 0.5) * 0.02));
-
-      // Append new reading
-      history.push({
-        timestamp: now,
-        moisture: parseFloat(moisture.toFixed(1)),
-        soilTemp: parseFloat(soilTemp.toFixed(1)),
-        ambientTemp: parseFloat(ambientTemp.toFixed(1)),
-        humidity: parseFloat(humidity.toFixed(1)),
-        ph: parseFloat(ph.toFixed(2))
-      });
-
-      // Cap at last 50 entries
-      if (history.length > 50) {
-        history.shift();
-      }
-
-      allReadings[field.id] = history;
-    });
-
-    localStorage.setItem(this.readingsKey, JSON.stringify(allReadings));
-    
-    // Evaluate thresholds
-    this.evaluateThresholdAlerts();
+      // Re-fetch and evaluate
+      await this.fetchData();
+      await this.evaluateThresholdAlerts();
+    } catch (e) {
+      console.error("Telemetry simulation tick error:", e);
+    }
   }
 
   // Checks current sensor statuses against crop thresholds
-  evaluateThresholdAlerts() {
-    const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
-    const crops = JSON.parse(localStorage.getItem("farm_crops")) || [];
-    const alerts = [];
+  async evaluateThresholdAlerts() {
+    try {
+      const fieldsRes = await fetch('/api/fields');
+      const fields = await fieldsRes.json();
+      const cropsRes = await fetch('/api/crops');
+      const crops = await cropsRes.json();
+      const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
 
-    fields.forEach(field => {
-      // Find growing crop
-      const activeCrop = crops.find(c => c.field_id === field.id && c.status !== "Harvested");
-      const cropName = activeCrop ? activeCrop.crop_name : "Default";
-      
-      // Grab thresholds rules
-      const rules = this.cropThresholds[cropName] || this.cropThresholds["Default"];
-      const latest = this.getLatestReadings(field.id);
+      // Clear existing sensor alerts in DB
+      await fetch('/api/sensor-alerts', { method: 'DELETE' });
 
-      // Check Moisture
-      if (latest.moisture < rules.moisture.min) {
-        alerts.push({
-          id: `sensor-alert-${field.id}-moisture-low`,
-          fieldId: field.id,
-          fieldName: field.name,
-          crop: cropName,
-          type: "Critical",
-          message: `Low Soil Moisture in ${field.name} (${latest.moisture}%). Threshold is ${rules.moisture.min}%. Irrigation is required immediately.`
-        });
-      } else if (latest.moisture > rules.moisture.max) {
-        alerts.push({
-          id: `sensor-alert-${field.id}-moisture-high`,
-          fieldId: field.id,
-          fieldName: field.name,
-          crop: cropName,
-          type: "Warning",
-          message: `High Soil Moisture in ${field.name} (${latest.moisture}%). Threshold is ${rules.moisture.max}%. High risk of waterlogging.`
-        });
+      for (const field of fields) {
+        // Find growing crop
+        const activeCrop = crops.find(c => c.field_id === field.id && c.status !== "Harvested");
+        const cropName = activeCrop ? activeCrop.crop_name : "Default";
+        
+        // Grab thresholds rules
+        const rules = this.cropThresholds[cropName] || this.cropThresholds["Default"];
+        const latest = this.getLatestReadings(field.id);
+
+        // Check Moisture
+        if (latest.moisture < rules.moisture.min) {
+          await this.saveAlert({
+            id: `sensor-alert-${field.id}-moisture-low`,
+            field_id: field.id,
+            type: "Critical",
+            message: `Low Soil Moisture in ${field.name} (${latest.moisture}%). Threshold is ${rules.moisture.min}%. Irrigation is required immediately.`,
+            timestamp: nowStr
+          });
+        } else if (latest.moisture > rules.moisture.max) {
+          await this.saveAlert({
+            id: `sensor-alert-${field.id}-moisture-high`,
+            field_id: field.id,
+            type: "Warning",
+            message: `High Soil Moisture in ${field.name} (${latest.moisture}%). Threshold is ${rules.moisture.max}%. High risk of waterlogging.`,
+            timestamp: nowStr
+          });
+        }
+
+        // Check Soil Temp
+        if (latest.soilTemp < rules.soilTemp.min) {
+          await this.saveAlert({
+            id: `sensor-alert-${field.id}-temp-low`,
+            field_id: field.id,
+            type: "Warning",
+            message: `Low Soil Temp in ${field.name} (${latest.soilTemp}°C). Optimal is ${rules.soilTemp.min}-${rules.soilTemp.max}°C.`,
+            timestamp: nowStr
+          });
+        } else if (latest.soilTemp > rules.soilTemp.max) {
+          await this.saveAlert({
+            id: `sensor-alert-${field.id}-temp-high`,
+            field_id: field.id,
+            type: "Warning",
+            message: `Elevated Soil Temp in ${field.name} (${latest.soilTemp}°C). Optimal is ${rules.soilTemp.min}-${rules.soilTemp.max}°C.`,
+            timestamp: nowStr
+          });
+        }
+
+        // Check pH
+        if (latest.ph < rules.ph.min) {
+          await this.saveAlert({
+            id: `sensor-alert-${field.id}-ph-low`,
+            field_id: field.id,
+            type: "Warning",
+            message: `Acidic Soil pH in ${field.name} (pH ${latest.ph}). Optimal for ${cropName} is pH ${rules.ph.min}-${rules.ph.max}.`,
+            timestamp: nowStr
+          });
+        } else if (latest.ph > rules.ph.max) {
+          await this.saveAlert({
+            id: `sensor-alert-${field.id}-ph-high`,
+            field_id: field.id,
+            type: "Warning",
+            message: `Alkaline Soil pH in ${field.name} (pH ${latest.ph}). Optimal for ${cropName} is pH ${rules.ph.min}-${rules.ph.max}.`,
+            timestamp: nowStr
+          });
+        }
       }
 
-      // Check Soil Temp
-      if (latest.soilTemp < rules.soilTemp.min) {
-        alerts.push({
-          id: `sensor-alert-${field.id}-temp-low`,
-          fieldId: field.id,
-          fieldName: field.name,
-          crop: cropName,
-          type: "Warning",
-          message: `Low Soil Temp in ${field.name} (${latest.soilTemp}°C). Optimal is ${rules.soilTemp.min}-${rules.soilTemp.max}°C.`
-        });
-      } else if (latest.soilTemp > rules.soilTemp.max) {
-        alerts.push({
-          id: `sensor-alert-${field.id}-temp-high`,
-          fieldId: field.id,
-          fieldName: field.name,
-          crop: cropName,
-          type: "Warning",
-          message: `Elevated Soil Temp in ${field.name} (${latest.soilTemp}°C). Optimal is ${rules.soilTemp.min}-${rules.soilTemp.max}°C.`
-        });
-      }
+      // Re-populate cache to load newest alerts
+      await this.fetchData();
+    } catch (e) {
+      console.error("Error evaluating threshold alerts:", e);
+    }
+  }
 
-      // Check pH
-      if (latest.ph < rules.ph.min) {
-        alerts.push({
-          id: `sensor-alert-${field.id}-ph-low`,
-          fieldId: field.id,
-          fieldName: field.name,
-          crop: cropName,
-          type: "Warning",
-          message: `Acidic Soil pH in ${field.name} (pH ${latest.ph}). Optimal for ${cropName} is pH ${rules.ph.min}-${rules.ph.max}.`
-        });
-      } else if (latest.ph > rules.ph.max) {
-        alerts.push({
-          id: `sensor-alert-${field.id}-ph-high`,
-          fieldId: field.id,
-          fieldName: field.name,
-          crop: cropName,
-          type: "Warning",
-          message: `Alkaline Soil pH in ${field.name} (pH ${latest.ph}). Optimal for ${cropName} is pH ${rules.ph.min}-${rules.ph.max}.`
-        });
-      }
-    });
-
-    localStorage.setItem(this.alertsKey, JSON.stringify(alerts));
+  // Helper to post active alert
+  async saveAlert(alert) {
+    try {
+      await fetch('/api/sensor-alerts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(alert)
+      });
+    } catch (e) {
+      console.error("Error saving alert to DB:", e);
+    }
   }
 
   // Returns alerts list
   getSensorAlerts() {
-    return JSON.parse(localStorage.getItem(this.alertsKey)) || [];
+    return this.cachedAlerts;
   }
 
   // Helper to determine Sparkline trend indicator based on last 5 readings
   getTrendIndicator(fieldId, metric) {
-    const all = this.getAllReadings();
-    const history = all[fieldId] || [];
+    const history = this.cachedReadings[fieldId] || [];
     if (history.length < 5) return "→";
 
     const last5 = history.slice(-5);
@@ -265,4 +334,3 @@ class SensorManager {
 
 // Export singleton
 window.sensorManager = new SensorManager();
-window.sensorManager.initDatabase();

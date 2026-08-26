@@ -10,44 +10,95 @@ class App {
     this.activeCropId = null;
   }
 
-  init() {
-    this.loadSettings();
+  async init() {
+    await this.loadSettings();
     this.setupViewRouter();
     this.setupEventListeners();
-    this.renderOverviewStats();
+    await this.refreshAllData();
     
-    // Render initial views
-    this.renderFieldsList();
-    this.renderCropsList();
-    this.renderPriceAlerts();
-    
-    // Initialize maps and charts on start
-    window.chartManager.renderAllCharts();
-    this.updateWeatherForFirstField();
+    // Initialize charts on start
+    await window.chartManager.renderAllCharts();
+    await this.updateWeatherForFirstField();
     
     // Apply Role rules
     this.applyRoleAccess();
 
     // Start telemetry simulation interval loop (every 10 seconds)
     if (window.sensorManager) {
-      window.sensorManager.evaluateThresholdAlerts();
-      this.renderPriceAlerts(); // update banner with initial telemetry checks
-      setInterval(() => {
-        window.sensorManager.runTelemetrySimulation();
-        this.onTelemetryTick();
+      await window.sensorManager.evaluateThresholdAlerts();
+      await this.renderPriceAlerts(); // update banner with initial telemetry checks
+      setInterval(async () => {
+        await window.sensorManager.runTelemetrySimulation();
+        await this.onTelemetryTick();
       }, 10000);
     }
   }
 
-  // Load configuration from localStorage
-  loadSettings() {
-    this.settings = JSON.parse(localStorage.getItem("farm_settings")) || {
-      role: "Farmer",
-      weather_api_key: "",
-      unit_preference: "Metric",
-      weather_lat: 18.5204,
-      weather_lng: 73.8567
-    };
+  async refreshAllData() {
+    await this.renderOverviewStats();
+    await this.renderFieldsList();
+    await this.renderCropsList();
+    await this.renderPriceAlerts();
+    await this.renderUpcomingActivities();
+  }
+
+  // Helper getters to communicate with MySQL backend REST APIs
+  async getFields() {
+    try {
+      const res = await fetch('/api/fields');
+      return await res.json();
+    } catch (e) {
+      console.error("Error fetching fields:", e);
+      return [];
+    }
+  }
+
+  async getCrops() {
+    try {
+      const res = await fetch('/api/crops');
+      return await res.json();
+    } catch (e) {
+      console.error("Error fetching crops:", e);
+      return [];
+    }
+  }
+
+  async getYields() {
+    try {
+      const res = await fetch('/api/yields');
+      return await res.json();
+    } catch (e) {
+      console.error("Error fetching yields:", e);
+      return [];
+    }
+  }
+
+  async getPriceAlerts() {
+    try {
+      const res = await fetch('/api/price-alerts');
+      return await res.json();
+    } catch (e) {
+      console.error("Error fetching price alerts:", e);
+      return [];
+    }
+  }
+
+  // Load configuration from database
+  async loadSettings() {
+    try {
+      const res = await fetch('/api/settings');
+      this.settings = await res.json();
+    } catch (e) {
+      console.warn("Failed fetching settings from backend, using defaults", e);
+      this.settings = {
+        role: "Farmer",
+        weather_api_key: "",
+        gov_api_key: "",
+        unit_preference: "Metric",
+        weather_lat: 18.5204,
+        weather_lng: 73.8567
+      };
+    }
     this.currentRole = this.settings.role;
     
     // Set settings inputs
@@ -96,12 +147,12 @@ class App {
 
     // Specific load triggers depending on view
     if (viewName === "overview") {
-      setTimeout(() => {
-        this.updateWeatherForFirstField();
+      setTimeout(async () => {
+        await this.updateWeatherForFirstField();
       }, 50);
     } else if (viewName === "reports") {
-      setTimeout(() => {
-        window.chartManager.renderAllCharts();
+      setTimeout(async () => {
+        await window.chartManager.renderAllCharts();
       }, 50);
     } else if (viewName === "market") {
       setTimeout(() => {
@@ -157,8 +208,8 @@ class App {
   }
 
   // Update weather for first field in database
-  updateWeatherForFirstField() {
-    const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
+  async updateWeatherForFirstField() {
+    const fields = await this.getFields();
     if (fields.length > 0) {
       window.weatherManager.updateWeatherUI(fields[0].lat, fields[0].lng);
     } else {
@@ -208,10 +259,10 @@ class App {
 
   // ---- DATA RENDERING & INJECTIONS ----
 
-  renderOverviewStats() {
-    const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
-    const crops = JSON.parse(localStorage.getItem("farm_crops")) || [];
-    const yields = JSON.parse(localStorage.getItem("farm_yields")) || [];
+  async renderOverviewStats() {
+    const fields = await this.getFields();
+    const crops = await this.getCrops();
+    const yields = await this.getYields();
 
     // Calculate total area
     const totalArea = fields.reduce((sum, f) => sum + parseFloat(f.area), 0).toFixed(1);
@@ -239,12 +290,12 @@ class App {
     document.getElementById("stat-avg-yield").textContent = `${avgYield} Tons`;
   }
 
-  renderUpcomingActivities() {
+  async renderUpcomingActivities() {
     const container = document.getElementById("upcoming-activities-list");
     if (!container) return;
 
-    const crops = JSON.parse(localStorage.getItem("farm_crops")) || [];
-    const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
+    const crops = await this.getCrops();
+    const fields = await this.getFields();
     const sensorAlerts = window.sensorManager ? window.sensorManager.getSensorAlerts() : [];
 
     const tasks = [];
@@ -313,12 +364,12 @@ class App {
 
   // --- FIELDS CRUD & LISTING ---
 
-  renderFieldsList() {
+  async renderFieldsList() {
     const container = document.getElementById("fields-grid");
     if (!container) return;
 
-    const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
-    const crops = JSON.parse(localStorage.getItem("farm_crops")) || [];
+    const fields = await this.getFields();
+    const crops = await this.getCrops();
 
     if (fields.length === 0) {
       container.innerHTML = `
@@ -382,9 +433,9 @@ class App {
     }).join("");
   }
 
-  showFieldDetail(fieldId) {
-    const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
-    const crops = JSON.parse(localStorage.getItem("farm_crops")) || [];
+  async showFieldDetail(fieldId) {
+    const fields = await this.getFields();
+    const crops = await this.getCrops();
     
     const field = fields.find(f => f.id === fieldId);
     if (!field) return;
@@ -395,7 +446,7 @@ class App {
     document.getElementById("detail-field-name").textContent = field.name;
     document.getElementById("detail-area").textContent = `${field.area} Acres`;
     document.getElementById("detail-soil").textContent = field.soil_type;
-    document.getElementById("detail-coords").textContent = `${field.lat.toFixed(5)}, ${field.lng.toFixed(5)}`;
+    document.getElementById("detail-coords").textContent = `${parseFloat(field.lat).toFixed(5)}, ${parseFloat(field.lng).toFixed(5)}`;
 
     // Build Crop History list
     const fieldCrops = crops.filter(c => c.field_id === fieldId);
@@ -449,7 +500,7 @@ class App {
     this.openModal("field-detail-modal");
   }
 
-  handleAddField() {
+  async handleAddField() {
     const name = document.getElementById("field-name").value;
     const area = parseFloat(document.getElementById("field-area").value);
     const soilType = document.getElementById("field-soil-type").value;
@@ -461,8 +512,6 @@ class App {
       return;
     }
 
-    const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
-    
     // Mock square coordinates around center latitude/longitude
     const coordinates = [
       [lat - 0.001, lng - 0.001],
@@ -481,39 +530,46 @@ class App {
       coordinates
     };
 
-    fields.push(newField);
-    localStorage.setItem("farm_fields", JSON.stringify(fields));
+    try {
+      await fetch('/api/fields', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newField)
+      });
+    } catch (e) {
+      console.error("Error adding field:", e);
+    }
 
     // Reset Form & Close
     document.getElementById("add-field-form").reset();
     this.closeModal("add-field-modal");
 
     // Redraw and Re-render
-    this.renderFieldsList();
-    this.renderOverviewStats();
-    this.updateWeatherForFirstField();
+    await this.refreshAllData();
+    await this.updateWeatherForFirstField();
   }
 
-  deleteField(fieldId) {
+  async deleteField(fieldId) {
     if (!confirm("Are you sure you want to delete this field? All crop records will remain but no longer link to this field.")) return;
 
-    let fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
-    fields = fields.filter(f => f.id !== fieldId);
-    localStorage.setItem("farm_fields", JSON.stringify(fields));
+    try {
+      await fetch(`/api/fields/${fieldId}`, { method: 'DELETE' });
+    } catch (e) {
+      console.error("Error deleting field:", e);
+    }
 
-    this.renderFieldsList();
-    this.renderOverviewStats();
-    this.updateWeatherForFirstField();
+    await this.refreshAllData();
+    await this.updateWeatherForFirstField();
   }
 
   // --- CROPS CRUD & LISTING ---
 
-  renderCropsList() {
+  async renderCropsList() {
     const container = document.getElementById("crops-list");
     if (!container) return;
 
-    const crops = JSON.parse(localStorage.getItem("farm_crops")) || [];
-    const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
+    const crops = await this.getCrops();
+    const fields = await this.getFields();
 
     if (crops.length === 0) {
       container.innerHTML = `
@@ -569,8 +625,8 @@ class App {
     }).join("");
   }
 
-  showAddCropModal(fieldId = null) {
-    const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
+  async showAddCropModal(fieldId = null) {
+    const fields = await this.getFields();
     const select = document.getElementById("crop-field-select");
     
     if (!select) return;
@@ -586,7 +642,7 @@ class App {
     this.openModal("add-crop-modal");
   }
 
-  handleAddCrop() {
+  async handleAddCrop() {
     const fieldId = document.getElementById("crop-field-select").value;
     const cropName = document.getElementById("crop-name").value;
     const variety = document.getElementById("crop-variety").value;
@@ -599,8 +655,6 @@ class App {
       return;
     }
 
-    const crops = JSON.parse(localStorage.getItem("farm_crops")) || [];
-
     const newCrop = {
       id: "c" + (Date.now()),
       field_id: fieldId,
@@ -612,17 +666,22 @@ class App {
       notes: notes
     };
 
-    crops.push(newCrop);
-    localStorage.setItem("farm_crops", JSON.stringify(crops));
+    try {
+      await fetch('/api/crops', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCrop)
+      });
+    } catch (e) {
+      console.error("Error adding crop:", e);
+    }
 
     // Reset Form & Close
     document.getElementById("add-crop-form").reset();
     this.closeModal("add-crop-modal");
 
     // Redraw and Re-render
-    this.renderCropsList();
-    this.renderOverviewStats();
-    this.renderFieldsList();
+    await this.refreshAllData();
   }
 
   showUpdateStageModal(cropId, currentStage) {
@@ -632,25 +691,27 @@ class App {
     this.openModal("update-stage-modal");
   }
 
-  handleUpdateStage() {
+  async handleUpdateStage() {
     const newStage = document.getElementById("update-stage-select").value;
-    const crops = JSON.parse(localStorage.getItem("farm_crops")) || [];
-    const crop = crops.find(c => c.id === this.activeCropId);
     
-    if (crop) {
-      crop.status = newStage;
-      localStorage.setItem("farm_crops", JSON.stringify(crops));
-      
-      this.renderCropsList();
-      this.renderFieldsList();
-      this.closeModal("update-stage-modal");
+    try {
+      await fetch(`/api/crops/${this.activeCropId}/stage`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStage })
+      });
+    } catch (e) {
+      console.error("Error updating crop stage:", e);
     }
+    
+    await this.refreshAllData();
+    this.closeModal("update-stage-modal");
   }
 
-  showHarvestModal(cropId) {
+  async showHarvestModal(cropId) {
     this.activeCropId = cropId;
     
-    const crops = JSON.parse(localStorage.getItem("farm_crops")) || [];
+    const crops = await this.getCrops();
     const crop = crops.find(c => c.id === cropId);
     if (!crop) return;
 
@@ -659,7 +720,7 @@ class App {
     this.openModal("harvest-modal");
   }
 
-  handleRecordHarvest() {
+  async handleRecordHarvest() {
     const quantity = parseFloat(document.getElementById("harvest-quantity").value);
     const cost = parseFloat(document.getElementById("harvest-cost").value);
     const revenue = parseFloat(document.getElementById("harvest-revenue").value);
@@ -671,15 +732,9 @@ class App {
       return;
     }
 
-    const crops = JSON.parse(localStorage.getItem("farm_crops")) || [];
-    const yields = JSON.parse(localStorage.getItem("farm_yields")) || [];
-
+    const crops = await this.getCrops();
     const crop = crops.find(c => c.id === this.activeCropId);
     if (!crop) return;
-
-    // Update Crop status to Harvested
-    crop.status = "Harvested";
-    crop.harvest_date = date;
 
     // Add Yield Log
     const newYield = {
@@ -695,39 +750,39 @@ class App {
       cost
     };
 
-    yields.push(newYield);
-
-    localStorage.setItem("farm_crops", JSON.stringify(crops));
-    localStorage.setItem("farm_yields", JSON.stringify(yields));
+    try {
+      await fetch('/api/yields', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newYield)
+      });
+    } catch (e) {
+      console.error("Error logging yield:", e);
+    }
 
     // Reset and Close
     document.getElementById("harvest-form").reset();
     this.closeModal("harvest-modal");
 
     // Redraw Dashboard
-    this.renderCropsList();
-    this.renderFieldsList();
-    this.renderOverviewStats();
-    this.renderUpcomingActivities();
+    await this.refreshAllData();
     window.chartManager.renderAllCharts();
   }
 
-  deleteCrop(cropId) {
+  async deleteCrop(cropId) {
     if (!confirm("Are you sure you want to delete this crop assignment?")) return;
 
-    let crops = JSON.parse(localStorage.getItem("farm_crops")) || [];
-    crops = crops.filter(c => c.id !== cropId);
-    localStorage.setItem("farm_crops", JSON.stringify(crops));
+    try {
+      await fetch(`/api/crops/${cropId}`, { method: 'DELETE' });
+    } catch (e) {
+      console.error("Error deleting crop:", e);
+    }
 
-    this.renderCropsList();
-    this.renderFieldsList();
-    this.renderOverviewStats();
+    await this.refreshAllData();
   }
 
 
-  // --- SETTINGS FORM ---
-
-  handleSaveSettings() {
+  async handleSaveSettings() {
     const role = document.getElementById("settings-role").value;
     const key = document.getElementById("settings-api-key").value;
     const govKey = document.getElementById("settings-gov-key").value;
@@ -742,27 +797,38 @@ class App {
       weather_lng: 73.8567
     };
 
-    localStorage.setItem("farm_settings", JSON.stringify(settings));
-    this.settings = settings;
-    this.currentRole = role;
+    try {
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+      this.settings = settings;
+      this.currentRole = role;
+    } catch (e) {
+      console.error("Error saving settings:", e);
+    }
 
     this.applyRoleAccess();
-    this.updateWeatherForFirstField();
+    await this.updateWeatherForFirstField();
     
     // Refresh tables showing/hiding cost column
-    this.renderCropsList();
-    this.renderUpcomingActivities();
+    await this.refreshAllData();
 
     alert("Settings saved successfully!");
   }
 
-  resetAllData() {
+  async resetAllData() {
     if (!confirm("WARNING: This will wipe all custom fields, crops, activities and yields, restoring default mock database values. Continue?")) return;
 
-    window.resetDatabaseToMock();
-    this.loadSettings();
-    this.init(); // Restart everything
-    alert("Database restored to defaults!");
+    try {
+      await fetch('/api/reset', { method: 'POST' });
+      await this.loadSettings();
+      await this.init(); // Restart everything
+      alert("Database restored to defaults!");
+    } catch (e) {
+      console.error("Error resetting data:", e);
+    }
   }
 
   // ---- MODAL CONTROLS ----
@@ -857,12 +923,12 @@ class App {
     window.chartManager.renderMarketTrendChart(trend.labels, trend.data, crop);
   }
 
-  renderPriceAlerts() {
+  async renderPriceAlerts() {
     const tableBody = document.getElementById("price-alerts-table-body");
     const banner = document.getElementById("price-alerts-banner");
 
     // Recalculate triggers
-    const alerts = window.marketPriceManager.checkAlerts();
+    const alerts = await window.marketPriceManager.checkAlerts();
     const sensorAlerts = window.sensorManager.getSensorAlerts();
 
     // 1. Render Table List
@@ -948,7 +1014,7 @@ class App {
     }
   }
 
-  handleCreateAlert() {
+  async handleCreateAlert() {
     const crop = document.getElementById("alert-crop-select").value;
     const targetPrice = document.getElementById("alert-target-price").value;
     const condition = document.getElementById("alert-condition").value;
@@ -962,25 +1028,25 @@ class App {
       return;
     }
 
-    window.marketPriceManager.addAlert(crop, targetPrice, condition, state, district, mandi);
+    await window.marketPriceManager.addAlert(crop, targetPrice, condition, state, district, mandi);
     
     // Reset Form
     document.getElementById("price-alert-form").reset();
     
     // Refresh alerts table & banners
-    this.renderPriceAlerts();
+    await this.renderPriceAlerts();
   }
 
-  deleteAlert(alertId) {
-    window.marketPriceManager.deleteAlert(alertId);
-    this.renderPriceAlerts();
+  async deleteAlert(alertId) {
+    await window.marketPriceManager.deleteAlert(alertId);
+    await this.renderPriceAlerts();
   }
 
   // ---- IoT SENSOR VIEWS & TELEMETRY CONTROLLER ----
 
-  onTelemetryTick() {
+  async onTelemetryTick() {
     // 1. Re-render overview alerts banner
-    this.renderPriceAlerts();
+    await this.renderPriceAlerts();
 
     // 2. If user is currently looking at the sensors view, update cards dynamically
     if (this.currentView === "sensors") {
@@ -994,27 +1060,27 @@ class App {
     }
   }
 
-  initSensorsPage() {
+  async initSensorsPage() {
     const fieldSelect = document.getElementById("sensor-chart-field");
     if (!fieldSelect) return;
 
     // Load active fields select options
-    const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
+    const fields = await this.getFields();
     fieldSelect.innerHTML = fields.map(f => `<option value="${f.id}">${f.name}</option>`).join("");
 
     // Render cards
-    this.renderSensorFields();
+    await this.renderSensorFields();
 
     // Draw initial charts
     this.updateSensorChart();
   }
 
-  renderSensorFields() {
+  async renderSensorFields() {
     const grid = document.getElementById("sensor-fields-grid");
     if (!grid) return;
 
-    const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
-    const crops = JSON.parse(localStorage.getItem("farm_crops")) || [];
+    const fields = await this.getFields();
+    const crops = await this.getCrops();
 
     if (fields.length === 0) {
       grid.innerHTML = `<div class="col-span-full text-center py-6 text-slate-400">No fields mapped yet. Go to Fields view to register lands.</div>`;

@@ -22,8 +22,7 @@ class ChartManager {
     this.sensorHistoryChart = null;
   }
 
-  // Renders analytics dashboard charts
-  renderAllCharts() {
+  async renderAllCharts() {
     // Destroy previous charts before drawing new ones
     this.destroyAll();
 
@@ -47,8 +46,8 @@ class ChartManager {
       return;
     }
 
-    const yields = JSON.parse(localStorage.getItem("farm_yields")) || [];
-    const fields = JSON.parse(localStorage.getItem("farm_fields")) || [];
+    const yields = await window.app.getYields();
+    const fields = await window.app.getFields();
 
     if (yields.length === 0) return;
 

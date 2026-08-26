@@ -148,64 +148,12 @@ const DEFAULT_MOCK_DATA = {
 
 // Seed function to initialize database in localStorage
 function initializeDatabase() {
-  if (!localStorage.getItem("farm_settings")) {
-    localStorage.setItem("farm_settings", JSON.stringify(DEFAULT_MOCK_DATA.settings));
-  }
-  if (!localStorage.getItem("farm_fields")) {
-    localStorage.setItem("farm_fields", JSON.stringify(DEFAULT_MOCK_DATA.fields));
-  }
-  if (!localStorage.getItem("farm_crops")) {
-    localStorage.setItem("farm_crops", JSON.stringify(DEFAULT_MOCK_DATA.crops));
-  }
-  if (!localStorage.getItem("farm_activities")) {
-    localStorage.setItem("farm_activities", JSON.stringify(DEFAULT_MOCK_DATA.activities));
-  }
-  if (!localStorage.getItem("farm_yields")) {
-    localStorage.setItem("farm_yields", JSON.stringify(DEFAULT_MOCK_DATA.yields));
-  }
-  if (!localStorage.getItem("farm_price_alerts")) {
-    const defaultAlerts = [
-      {
-        id: "alert-1",
-        crop: "Wheat",
-        targetPrice: 2150,
-        condition: "above",
-        state: "Maharashtra",
-        district: "Pune",
-        mandi: "Pune Mandi",
-        isTriggered: true,
-        dateCreated: "2026-08-25"
-      }
-    ];
-    localStorage.setItem("farm_price_alerts", JSON.stringify(defaultAlerts));
-  }
+  // Database initialization is now handled server-side in MySQL (via schema.sql)
 }
 
 // Reset database function
 function resetDatabaseToMock() {
-  localStorage.setItem("farm_settings", JSON.stringify(DEFAULT_MOCK_DATA.settings));
-  localStorage.setItem("farm_fields", JSON.stringify(DEFAULT_MOCK_DATA.fields));
-  localStorage.setItem("farm_crops", JSON.stringify(DEFAULT_MOCK_DATA.crops));
-  localStorage.setItem("farm_activities", JSON.stringify(DEFAULT_MOCK_DATA.activities));
-  localStorage.setItem("farm_yields", JSON.stringify(DEFAULT_MOCK_DATA.yields));
-  localStorage.setItem("farm_price_alerts", JSON.stringify([
-    {
-      id: "alert-1",
-      crop: "Wheat",
-      targetPrice: 2150,
-      condition: "above",
-      state: "Maharashtra",
-      district: "Pune",
-      mandi: "Pune Mandi",
-      isTriggered: true,
-      dateCreated: "2026-08-25"
-    }
-  ]));
-  localStorage.removeItem("farm_sensor_readings");
-  localStorage.removeItem("farm_sensor_alerts");
-  if (window.sensorManager) {
-    window.sensorManager.initDatabase();
-  }
+  // Database resetting is now handled server-side in MySQL (via /api/reset POST)
 }
 
 // Initial execute

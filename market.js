@@ -1,9 +1,6 @@
-// Indian Mandi Market Price Checker Module
+// Indian Mandi Market Price Checker Module (MySQL Backend Version)
 class MarketPriceManager {
   constructor() {
-    this.alertsKey = "farm_price_alerts";
-    this.apiKeyKey = "farm_weather_api_key"; // Reuse weather API key or let them configure data.gov.in specifically
-    
     // Seed initial mock market data (Comprehensive Indian Mandis)
     this.mockMandis = {
       "Maharashtra": {
@@ -58,8 +55,7 @@ class MarketPriceManager {
   }
 
   getGovApiKey() {
-    const settings = JSON.parse(localStorage.getItem("farm_settings")) || {};
-    return settings.gov_api_key || "";
+    return (window.app && window.app.settings) ? window.app.settings.gov_api_key : "";
   }
 
   // Fetch prices based on search parameters
@@ -79,8 +75,6 @@ class MarketPriceManager {
 
   // Fetch from data.gov.in API (Variety-wise daily market prices)
   async fetchFromGovAPI(state, district, market, crop, apiKey) {
-    // API endpoint for agmarknet variety daily prices
-    // Filters: state, district, market, commodity (crop)
     const baseUrl = "https://api.data.gov.in/resource/9ef84281-2a12-4174-a7bf-3d572bc2178a";
     const url = `${baseUrl}?api-key=${apiKey}&format=json&limit=10&filters[state]=${encodeURIComponent(state)}&filters[district]=${encodeURIComponent(district)}&filters[market]=${encodeURIComponent(market)}&filters[commodity]=${encodeURIComponent(crop)}`;
     
@@ -119,7 +113,6 @@ class MarketPriceManager {
         };
       }
     } catch (e) {
-      // Return default crop pricing if specific mandi combination not pre-seeded
       return this.getDefaultPrice(crop);
     }
     return this.getDefaultPrice(crop);
@@ -169,16 +162,17 @@ class MarketPriceManager {
 
   // ---- PRICE ALERTS MANAGEMENT ----
 
-  getAlerts() {
-    return JSON.parse(localStorage.getItem(this.alertsKey)) || [];
+  async getAlerts() {
+    try {
+      const res = await fetch('/api/price-alerts');
+      return await res.json();
+    } catch (e) {
+      console.error("Error fetching price alerts:", e);
+      return [];
+    }
   }
 
-  saveAlerts(alerts) {
-    localStorage.setItem(this.alertsKey, JSON.stringify(alerts));
-  }
-
-  addAlert(crop, targetPrice, condition, state, district, mandi) {
-    const alerts = this.getAlerts();
+  async addAlert(crop, targetPrice, condition, state, district, mandi) {
     const newAlert = {
       id: "alert-" + Date.now(),
       crop,
@@ -190,24 +184,33 @@ class MarketPriceManager {
       isTriggered: false,
       dateCreated: new Date().toISOString().split("T")[0]
     };
-    alerts.push(newAlert);
-    this.saveAlerts(alerts);
-    this.checkAlerts(); // Immediate evaluate
+
+    try {
+      await fetch('/api/price-alerts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newAlert)
+      });
+      await this.checkAlerts(); // Immediate evaluate triggers in DB
+    } catch (e) {
+      console.error("Error creating price alert in DB:", e);
+    }
     return newAlert;
   }
 
-  deleteAlert(alertId) {
-    let alerts = this.getAlerts();
-    alerts = alerts.filter(a => a.id !== alertId);
-    this.saveAlerts(alerts);
+  async deleteAlert(alertId) {
+    try {
+      await fetch(`/api/price-alerts/${alertId}`, { method: 'DELETE' });
+    } catch (e) {
+      console.error("Error deleting price alert:", e);
+    }
   }
 
-  // Checks alerts against mandi prices and tags triggers
-  checkAlerts() {
-    const alerts = this.getAlerts();
-    let hasChanged = false;
+  // Checks alerts against mandi prices and tags triggers in DB
+  async checkAlerts() {
+    const alerts = await this.getAlerts();
 
-    alerts.forEach(alert => {
+    for (const alert of alerts) {
       // Lookup latest modal price
       const priceInfo = this.getMockMarketPrice(alert.state, alert.district, alert.mandi, alert.crop);
       const currentModal = priceInfo.modal;
@@ -221,19 +224,25 @@ class MarketPriceManager {
 
       if (alert.isTriggered !== triggered) {
         alert.isTriggered = triggered;
-        hasChanged = true;
+        // Update trigger state in DB
+        try {
+          await fetch(`/api/price-alerts/${alert.id}/trigger`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isTriggered: triggered })
+          });
+        } catch (e) {
+          console.error("Error updating price alert trigger state:", e);
+        }
       }
-    });
-
-    if (hasChanged) {
-      this.saveAlerts(alerts);
     }
-    return alerts;
+
+    // Re-fetch to return latest triggered states from DB
+    return await this.getAlerts();
   }
 
   // Return live price matched for crop name (for detail links)
   getLiveCropPrice(cropName) {
-    // Crop names are case-sensitive matching
     let normalized = "Wheat";
     if (cropName.toLowerCase().includes("wheat")) normalized = "Wheat";
     else if (cropName.toLowerCase().includes("rice") || cropName.toLowerCase().includes("paddy")) normalized = "Rice";
@@ -241,7 +250,6 @@ class MarketPriceManager {
     else if (cropName.toLowerCase().includes("maize") || cropName.toLowerCase().includes("corn")) normalized = "Maize";
     else if (cropName.toLowerCase().includes("cotton")) normalized = "Cotton";
 
-    // Grab default pricing in Pune Mandi for linking
     return {
       crop: normalized,
       mandi: "Pune Mandi (MH)",

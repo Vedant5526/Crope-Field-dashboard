@@ -6,8 +6,7 @@ class WeatherManager {
   }
 
   getApiKey() {
-    const settings = JSON.parse(localStorage.getItem("farm_settings")) || {};
-    return settings.weather_api_key || "";
+    return (window.app && window.app.settings) ? window.app.settings.weather_api_key : "";
   }
 
   // Returns weather data (API-fetched or mock) for given coordinates
