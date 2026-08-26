@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GreenField - Crop & Field Management Dashboard</title>
+  <!-- Google Fonts for Premium Theme -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=Inter:wght@100..900&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Leaflet CSS & JS CDN -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Custom Styling overrides -->
+  <style>
+    /* Premium Parchment & Dark Green Design System */
+    body {
+      background-color: #F5F1E6 !important;
+      font-family: 'Inter', sans-serif;
+    }
+
+    h1, h2, h3, h4, h5, h6, .brand-title {
+      font-family: 'Fraunces', serif;
+    }
+
+    /* Monospace formatting for metrics, values, logs, and codes */
+    .mono-data,
+    #stat-total-fields, #stat-total-area, #stat-active-crops, #stat-tasks-due, #stat-avg-yield,
+    .role-finance, #mandi-min-price, #mandi-modal-price, #mandi-max-price,
+    .sensor-reading, #detail-coords, .leaflet-popup-content p, .font-mono-val {
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    /* Dark Ink-Green Sidebar Override */
+    .sidebar {
+      background-color: #132A20 !important;
+    }
+    
+    .sidebar nav a.bg-emerald-600 {
+      background-color: #B8862E !important;
+      color: #ffffff !important;
+    }
+
+    /* Gold Accent Overrides for buttons and text highlights */
+    .bg-emerald-600, .bg-emerald-500 {
+      background-color: #B8862E !important;
+      color: #ffffff !important;
+    }
+    .hover\:bg-emerald-600:hover, .hover\:bg-emerald-500:hover {
+      background-color: #936b22 !important;
+    }
+    .text-emerald-600, .text-emerald-500 {
+      color: #B8862E !important;
+    }
+    .text-emerald-400 {
+      color: #e5b869 !important; /* Lighter gold for dark background */
+    }
+    .bg-emerald-50 {
+      background-color: #faf6eb !important;
+      border-color: #f1e4c3 !important;
+    }
+    .text-emerald-800 {
+      color: #78581e !important;
+    }
+    .text-emerald-700 {
+      color: #8c6622 !important;
+    }
+    .bg-emerald-100 {
+      background-color: #f3e6c9 !important;
+    }
+
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #fdfbf7;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Map Containers */
+    .leaflet-map-container {
+      height: 350px;
+      width: 100%;
+      border-radius: 0.75rem;
+      z-index: 10;
+    }
+
+    #field-picker-map {
+      height: 250px;
+      width: 100%;
+      border-radius: 0.5rem;
+      z-index: 10;
+    }
+
+    /* Chart Canvas Wrapper */
+    .chart-container {
+      position: relative;
+      width: 100%;
+      height: 260px;
+    }
+
+    /* Page transitions */
+    .view-section {
+      display: none;
+      opacity: 0;
+      transition: opacity 0.25s ease-in-out;
+    }
+
+    .view-section.active {
+      display: block;
+      opacity: 1;
+    }
+
+    /* Weather UI Details */
+    .weather-card {
+      background: linear-gradient(135deg, #1e3a2f 0%, #132a20 100%) !important; /* Dark ink-green weather card */
+    }
+
+    .weather-card-night {
+      background: linear-gradient(135deg, #09130e 0%, #050a07 100%) !important;
+    }
+
+    /* Crop growth stage badges */
+    .stage-badge-sown {
+      background-color: #e2e8f0;
+      color: #475569;
+    }
+    .stage-badge-vegetative {
+      background-color: #dbeafe;
+      color: #2563eb;
+    }
+    .stage-badge-flowering {
+      background-color: #fef9c3;
+      color: #854d0e;
+    }
+    .stage-badge-ready {
+      background-color: #dcfce7;
+      color: #166534;
+    }
+    .stage-badge-harvested {
+      background-color: #ffedd5;
+      color: #c2410c;
+    }
+
+    /* Custom styles for Leaflet */
+    .leaflet-popup-content-wrapper {
+      border-radius: 0.5rem;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      font-family: inherit;
+    }
+    .leaflet-popup-content {
+      margin: 12px 16px;
+      line-height: 1.4;
+    }
+
+    /* CSS Loader for fetching API data */
+    .loader {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #B8862E;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Dynamic blinking sensor dot indicator */
+    .sensor-dot-optimal {
+      background-color: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+    .sensor-dot-warning {
+      background-color: #f59e0b;
+      box-shadow: 0 0 8px #f59e0b;
+      animation: pulse 1.5s infinite;
+    }
+    .sensor-dot-critical {
+      background-color: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.4; }
+      50% { opacity: 1; }
+      100% { opacity: 0.4; }
+    }
+
+    /* Print reports override */
+    @media print {
+      body {
+        background: white;
+        color: black;
+      }
+      .sidebar, .no-print {
+        display: none !important;
+      }
+      .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+      }
+      .chart-container {
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans flex min-h-screen">
+
+  <!-- SIDEBAR NAVIGATION -->
+  <aside class="sidebar w-64 bg-slate-900 text-slate-100 flex flex-col justify-between p-4 flex-shrink-0 z-20">
+    <div>
+      <!-- Brand Logo -->
+      <div class="flex items-center space-x-3 px-2 py-4 mb-6 border-b border-slate-800">
+        <i class="fas fa-seedling text-3xl text-emerald-400"></i>
+        <div>
+          <span class="text-xl font-extrabold tracking-wider text-white">GreenField</span>
+          <span class="block text-[10px] text-slate-400 font-bold uppercase tracking-widest">Farm Management</span>
+        </div>
+      </div>
+
+      <!-- User Active Role -->
+      <div class="px-2 py-3 mb-6 bg-slate-800/50 rounded-xl flex items-center space-x-3">
+        <div class="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-sm">
+          <i class="fas fa-user-circle text-lg"></i>
+        </div>
+        <div>
+          <span class="block text-xs text-slate-400">Active Profile</span>
+          <span class="current-role-badge px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-emerald-100 text-emerald-800">Farmer</span>
+        </div>
+      </div>
+
+      <!-- Navigation Menu -->
+      <nav class="space-y-1">
+        <a href="#" data-target-view="overview" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-sm bg-emerald-600 text-white transition">
+          <i class="fas fa-chart-pie w-5 text-center text-lg"></i>
+          <span>Overview</span>
+        </a>
+        <a href="#" data-target-view="fields" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 transition">
+          <i class="fas fa-map-marked-alt w-5 text-center text-lg"></i>
+          <span>Fields</span>
+        </a>
+        <a href="#" data-target-view="crops" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 transition">
+          <i class="fas fa-wheat-awn w-5 text-center text-lg"></i>
+          <span>Crops</span>
+        </a>
+        <a href="#" data-target-view="activities" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 transition">
+          <i class="fas fa-list-check w-5 text-center text-lg"></i>
+          <span>Activities</span>
+        </a>
+        <a href="#" data-target-view="market" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 transition">
+          <i class="fas fa-coins w-5 text-center text-lg"></i>
+          <span>Market Prices</span>
+        </a>
+        <a href="#" data-target-view="sensors" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 transition">
+          <i class="fas fa-microchip w-5 text-center text-lg"></i>
+          <span>Sensors Telemetry</span>
+        </a>
+        <a href="#" data-target-view="reports" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 transition role-finance">
+          <i class="fas fa-file-invoice-dollar w-5 text-center text-lg"></i>
+          <span>Reports & Yields</span>
+        </a>
+        <a href="#" data-target-view="settings" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 transition">
+          <i class="fas fa-sliders w-5 text-center text-lg"></i>
+          <span>Settings</span>
+        </a>
+      </nav>
+    </div>
+
+    <!-- Sidebar footer info -->
+    <div class="px-2 py-4 border-t border-slate-800 text-[10px] text-slate-500 text-center font-medium">
+      <p>Academic B.E. Project</p>
+      <p class="mt-0.5">Crop & Field Dashboard v1.0</p>
+    </div>
+  </aside>
+
+  <!-- MAIN MAIN CONTAINER -->
+  <main class="flex-grow flex flex-col min-w-0 overflow-y-auto">
+    <!-- Top Header bar -->
+    <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between no-print">
+      <div>
+        <h2 class="text-xl font-extrabold text-slate-800">Crop and Field Management System</h2>
+        <p class="text-xs text-slate-400">Interactive farming operations monitoring & analysis</p>
+      </div>
+      <div class="flex items-center space-x-4">
+        <!-- Notification Icon -->
+        <button class="relative w-9 h-9 border border-slate-200 hover:bg-slate-50 transition rounded-xl flex items-center justify-center text-slate-600">
+          <i class="fas fa-bell"></i>
+          <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+        </button>
+        <!-- Print Shortcut Button -->
+        <button onclick="window.print()" class="w-9 h-9 border border-slate-200 hover:bg-slate-50 transition rounded-xl flex items-center justify-center text-slate-600" title="Print/Export Report">
+          <i class="fas fa-print"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- CONTENT WRAPPER -->
+    <div class="p-6 max-w-7xl w-full mx-auto space-y-6">
+
+      <!-- ============================================== -->
+      <!-- VIEW: OVERVIEW -->
+      <!-- ============================================== -->
+      <section id="overview-view" class="view-section active space-y-6">
+        
+        <!-- Welcome banner / Row -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center space-y-2 md:space-y-0">
+          <div>
+            <h1 class="text-2xl font-black text-slate-800">Dashboard Overview</h1>
+            <p class="text-sm text-slate-500">Real-time status of your agricultural lands and schedules</p>
+          </div>
+          <div class="flex items-center space-x-2 role-admin-farmer">
+            <button onclick="app.openModal('add-field-modal')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center space-x-2">
+              <i class="fas fa-plus-circle"></i>
+              <span>Add Field</span>
+            </button>
+            <button onclick="app.showAddCropModal()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center space-x-2">
+              <i class="fas fa-seedling"></i>
+              <span>Assign Crop</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Triggered Price Alerts Banner -->
+        <div id="price-alerts-banner" class="hidden flex flex-col space-y-2">
+          <!-- Injected via JavaScript -->
+        </div>
+
+        <!-- STAT CARDS -->
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          <!-- Total Fields -->
+          <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center space-x-4">
+            <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl flex-shrink-0">
+              <i class="fas fa-border-all"></i>
+            </div>
+            <div>
+              <span class="text-xs text-slate-400 block font-medium">Fields</span>
+              <span id="stat-total-fields" class="text-xl font-black text-slate-800">3</span>
+            </div>
+          </div>
+          <!-- Total Acres -->
+          <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center space-x-4">
+            <div class="w-11 h-11 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center text-xl flex-shrink-0">
+              <i class="fas fa-map"></i>
+            </div>
+            <div>
+              <span class="text-xs text-slate-400 block font-medium">Total Area</span>
+              <span id="stat-total-area" class="text-xl font-black text-slate-800">26.1 Acres</span>
+            </div>
+          </div>
+          <!-- Active Crops -->
+          <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center space-x-4">
+            <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl flex-shrink-0">
+              <i class="fas fa-wheat-awn"></i>
+            </div>
+            <div>
+              <span class="text-xs text-slate-400 block font-medium">Active Crops</span>
+              <span id="stat-active-crops" class="text-xl font-black text-slate-800">3</span>
+            </div>
+          </div>
+          <!-- Scheduled/Active Tasks -->
+          <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center space-x-4">
+            <div class="w-11 h-11 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-xl flex-shrink-0">
+              <i class="fas fa-tasks"></i>
+            </div>
+            <div>
+              <span class="text-xs text-slate-400 block font-medium">Tasks Due</span>
+              <span id="stat-tasks-due" class="text-xl font-black text-slate-800">2</span>
+            </div>
+          </div>
+          <!-- Average Yields -->
+          <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center space-x-4 col-span-2 lg:col-span-1">
+            <div class="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl flex-shrink-0">
+              <i class="fas fa-chart-line"></i>
+            </div>
+            <div>
+              <span class="text-xs text-slate-400 block font-medium">Avg Yield</span>
+              <span id="stat-avg-yield" class="text-xl font-black text-slate-800">32.5 Tons</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAIN OVERVIEW SECTION (MAPS / ACTIVITIES / WEATHER) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- MAP CONTAINER + TASKS -->
+          <div class="lg:col-span-2 space-y-6">
+            
+            <!-- Leaflet Interactive Map -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center space-x-2">
+                  <i class="fas fa-map-location-dot text-emerald-600 text-lg"></i>
+                  <h3 class="font-extrabold text-slate-800 text-sm">Interactive Fields Map</h3>
+                </div>
+                <span class="text-[10px] text-slate-400 italic">Click fields to view crop details & action options</span>
+              </div>
+              
+              <!-- Map Canvas -->
+              <div id="overview-map" class="leaflet-map-container"></div>
+            </div>
+
+            <!-- Recent/Upcoming Tasks Logs -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+              <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                <div class="flex items-center space-x-2">
+                  <i class="fas fa-calendar-days text-slate-600 text-lg"></i>
+                  <h3 class="font-extrabold text-slate-800 text-sm">Operational Task Schedule</h3>
+                </div>
+                <button onclick="app.switchView('activities')" class="text-xs font-bold text-emerald-600 hover:text-emerald-700">View All Logs &rarr;</button>
+              </div>
+
+              <!-- List container -->
+              <div id="upcoming-activities-list" class="flex flex-col space-y-3">
+                <!-- Injected via JavaScript -->
+              </div>
+            </div>
+
+          </div>
+
+          <!-- WEATHER WIDGET SIDE PANEL -->
+          <div id="weather-widget-container" class="flex flex-col space-y-4">
+            <!-- Loading state / Content injected via weather.js -->
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ============================================== -->
+      <!-- VIEW: FIELDS -->
+      <!-- ============================================== -->
+      <section id="fields-view" class="view-section space-y-6">
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-2xl font-black text-slate-800">Field Management Directory</h1>
+            <p class="text-sm text-slate-500">Track soil analysis, crop rotation histories, and locations</p>
+          </div>
+          <button onclick="app.openModal('add-field-modal')" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center space-x-2 role-admin-farmer">
+            <i class="fas fa-plus-circle"></i>
+            <span>Register Field</span>
+          </button>
+        </div>
+
+        <!-- Grid of field cards -->
+        <div id="fields-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Injected via JS -->
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- VIEW: CROPS -->
+      <!-- ============================================== -->
+      <section id="crops-view" class="view-section space-y-6">
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-2xl font-black text-slate-800">Crop Cycle Planner</h1>
+            <p class="text-sm text-slate-500">Map seed varieties, monitor crop stages, and schedules</p>
+          </div>
+          <button onclick="app.showAddCropModal()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center space-x-2 role-admin-farmer">
+            <i class="fas fa-plus-circle"></i>
+            <span>Assign Crop to Field</span>
+          </button>
+        </div>
+
+        <!-- Crop Tracker Table Container -->
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="font-extrabold text-slate-800 text-sm">Active & Historic Cultivations</h3>
+            <span class="text-xs text-slate-400">Stage: Sown &rarr; Vegetative &rarr; Flowering &rarr; Ready &rarr; Harvested</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-200 bg-slate-50 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
+                  <th class="px-6 py-3.5">Crop Name / Variety</th>
+                  <th class="px-6 py-3.5">Assigned Field</th>
+                  <th class="px-6 py-3.5">Sowing Date</th>
+                  <th class="px-6 py-3.5">Expected Harvest</th>
+                  <th class="px-6 py-3.5">Growth Stage</th>
+                  <th class="px-6 py-3.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="crops-list" class="divide-y divide-slate-100">
+                <!-- Injected via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- VIEW: ACTIVITIES -->
+      <!-- ============================================== -->
+      <section id="activities-view" class="view-section space-y-6">
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-2xl font-black text-slate-800">Agricultural Activities & Cost Logs</h1>
+            <p class="text-sm text-slate-500">Record irrigation, fertilizer application, weeding, and pesticides</p>
+          </div>
+          <button onclick="app.showAddActivityModal()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center space-x-2">
+            <i class="fas fa-plus-circle"></i>
+            <span>Log Daily Activity</span>
+          </button>
+        </div>
+
+        <!-- Activity History Card -->
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="font-extrabold text-slate-800 text-sm">Farm Operations Register</h3>
+            <span class="text-xs text-slate-400">Expenditures are compiled dynamically in reports</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-200 bg-slate-50 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
+                  <th class="px-6 py-3.5">Log Date</th>
+                  <th class="px-6 py-3.5">Field Area</th>
+                  <th class="px-6 py-3.5">Activity Type</th>
+                  <th class="px-6 py-3.5">Application details</th>
+                  <th class="px-6 py-3.5 role-finance">Cost Value ($)</th>
+                  <th class="px-6 py-3.5 text-right">Delete</th>
+                </tr>
+              </thead>
+              <tbody id="activities-table-body" class="divide-y divide-slate-100">
+                <!-- Injected via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- VIEW: MARKET PRICES -->
+      <!-- ============================================== -->
+      <section id="market-view" class="view-section space-y-6">
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-2xl font-black text-slate-800">Mandi Price Checker</h1>
+            <p class="text-sm text-slate-500">Compare variety-wise daily market rates across Indian agricultural yards</p>
+          </div>
+        </div>
+
+        <!-- Filter Controls & Current Price Display Card -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-1 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+            <h3 class="font-extrabold text-slate-800 text-sm pb-2 border-b border-slate-100">Select Market Parameters</h3>
+            
+            <div class="space-y-3">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">State</label>
+                <select id="mandi-state" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                  <!-- Loaded dynamically -->
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">District</label>
+                <select id="mandi-district" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                  <!-- Loaded dynamically -->
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Market (Mandi)</label>
+                <select id="mandi-yard" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                  <!-- Loaded dynamically -->
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Crop Commodity</label>
+                <select id="mandi-crop" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                  <option value="Wheat">Wheat</option>
+                  <option value="Rice">Rice (Paddy)</option>
+                  <option value="Soybeans">Soybeans</option>
+                  <option value="Maize">Maize (Corn)</option>
+                  <option value="Cotton">Cotton</option>
+                </select>
+              </div>
+            </div>
+            
+            <button onclick="app.updateMarketLookup()" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs shadow-sm transition">
+              Lookup Mandi Price
+            </button>
+          </div>
+
+          <!-- Current Mandi price display -->
+          <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-start border-b border-slate-100 pb-2 mb-4">
+                <h3 class="font-extrabold text-slate-800 text-sm">Today's Agmarknet Price</h3>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800" id="mandi-source-badge">Mock Data</span>
+              </div>
+              
+              <div class="grid grid-cols-3 gap-4 text-center my-2">
+                <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                  <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">Minimum Rate</span>
+                  <span id="mandi-min-price" class="text-xl font-black text-slate-700">₹0</span>
+                </div>
+                <div class="p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
+                  <span class="text-[10px] text-emerald-600 font-bold uppercase tracking-wider block mb-1">Modal Rate</span>
+                  <span id="mandi-modal-price" class="text-2xl font-black text-emerald-700">₹0</span>
+                  <span class="text-[9px] text-emerald-400 block mt-0.5">per Quintal</span>
+                </div>
+                <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                  <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">Maximum Rate</span>
+                  <span id="mandi-max-price" class="text-xl font-black text-slate-700">₹0</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Price Trend Line Chart -->
+            <div class="mt-4 border-t border-slate-100 pt-4">
+              <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">30-Day Historical Price Trend</h4>
+              <div class="chart-container" style="height: 180px;">
+                <canvas id="marketTrendChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alert creator & Alert list grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Alert Creator Card -->
+          <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+            <h3 class="font-extrabold text-slate-800 text-sm pb-2 border-b border-slate-100">Schedule Price Alert</h3>
+            
+            <form id="price-alert-form" onsubmit="event.preventDefault(); app.handleCreateAlert();" class="space-y-3">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Crop</label>
+                <select id="alert-crop-select" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                  <option value="Wheat">Wheat</option>
+                  <option value="Rice">Rice</option>
+                  <option value="Soybeans">Soybeans</option>
+                  <option value="Maize">Maize</option>
+                  <option value="Cotton">Cotton</option>
+                </select>
+              </div>
+              
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Condition</label>
+                  <select id="alert-condition" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                    <option value="above">Goes Above (&ge;)</option>
+                    <option value="below">Goes Below (&le;)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Target Price (₹)</label>
+                  <input id="alert-target-price" type="number" placeholder="e.g. 2250" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                </div>
+              </div>
+
+              <button type="submit" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs shadow-sm transition">
+                Create Target Alert
+              </button>
+            </form>
+          </div>
+
+          <!-- Active Alerts list -->
+          <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col">
+            <h3 class="font-extrabold text-slate-800 text-sm pb-2 border-b border-slate-100 mb-3">Active Target Price Alerts</h3>
+            
+            <div class="flex-grow overflow-y-auto max-h-48">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="border-b border-slate-100 text-slate-400 font-bold">
+                    <th class="py-2">Crop</th>
+                    <th class="py-2">Target Price</th>
+                    <th class="py-2">Mandi Location</th>
+                    <th class="py-2">Status</th>
+                    <th class="py-2 text-right">Delete</th>
+                  </tr>
+                </thead>
+                <tbody id="price-alerts-table-body">
+                  <!-- JS Injections -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- VIEW: SENSORS TELEMETRY -->
+      <!-- ============================================== -->
+      <section id="sensors-view" class="view-section space-y-6">
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-2xl font-black text-slate-800">IoT Sensor Networks</h1>
+            <p class="text-sm text-slate-500">Live telemetry feed from microcontroller soil and ambient sensors</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse"></span>
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Live Telemetry Loop Active</span>
+          </div>
+        </div>
+
+        <!-- Telemetry Cards Grid -->
+        <div id="sensor-fields-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Injected via JavaScript dynamically -->
+        </div>
+
+        <!-- Historical Sensor Analytics Line Chart -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center space-y-2 md:space-y-0 border-b border-slate-100 pb-3">
+            <h3 class="font-extrabold text-slate-800 text-sm flex items-center space-x-2">
+              <i class="fas fa-chart-area text-slate-500"></i>
+              <span>24-Hour Telemetry Analysis Chart</span>
+            </h3>
+            
+            <div class="flex items-center space-x-2">
+              <select id="sensor-chart-field" class="border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                <!-- Loaded via JS -->
+              </select>
+              <select id="sensor-chart-metric" class="border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                <option value="moisture">Soil Moisture (%)</option>
+                <option value="soilTemp">Soil Temperature (°C)</option>
+                <option value="ambientTemp">Ambient/DHT Temp (°C)</option>
+                <option value="humidity">Ambient Humidity (%)</option>
+                <option value="ph">Soil pH</option>
+              </select>
+              <button onclick="app.updateSensorChart()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition">Plot Readings</button>
+            </div>
+          </div>
+
+          <div class="chart-container" style="height: 250px;">
+            <canvas id="sensorsHistoryChart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- VIEW: REPORTS & ANALYTICS -->
+      <!-- ============================================== -->
+      <section id="reports-view" class="view-section space-y-6">
+        <div>
+          <h1 class="text-2xl font-black text-slate-800">Yield Analytics & Financial Reports</h1>
+          <p class="text-sm text-slate-500">Evaluate field efficiency, revenue performance, and historical trends</p>
+        </div>
+
+        <!-- Charts Layout Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Line chart: Yield Trends -->
+          <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+            <h3 class="font-extrabold text-slate-800 text-sm mb-4 flex items-center space-x-2">
+              <i class="fas fa-chart-line text-emerald-500"></i>
+              <span>Yield Trends over time (Tons)</span>
+            </h3>
+            <div class="chart-container">
+              <canvas id="yieldTrendChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Bar chart: Financial performance -->
+          <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+            <h3 class="font-extrabold text-slate-800 text-sm mb-4 flex items-center space-x-2">
+              <i class="fas fa-hand-holding-dollar text-emerald-500"></i>
+              <span>Production Costs vs Revenue ($)</span>
+            </h3>
+            <div class="chart-container">
+              <canvas id="financialChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Bar Chart: Field Productivity Index -->
+          <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm lg:col-span-2">
+            <h3 class="font-extrabold text-slate-800 text-sm mb-4 flex items-center space-x-2">
+              <i class="fas fa-scale-balanced text-emerald-500"></i>
+              <span>Field Productivity Comparison Index (Tons harvested / Acre)</span>
+            </h3>
+            <div class="chart-container" style="height: 300px;">
+              <canvas id="productivityChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- VIEW: SETTINGS -->
+      <!-- ============================================== -->
+      <section id="settings-view" class="view-section space-y-6">
+        <div>
+          <h1 class="text-2xl font-black text-slate-800">Farm Profile & System Settings</h1>
+          <p class="text-sm text-slate-500">Manage user profiles, APIs, unit scales, and maintenance</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Form parameters card -->
+          <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+            <h3 class="font-bold text-slate-800 text-base mb-4 pb-2 border-b border-slate-100">System Preferences</h3>
+            
+            <form id="settings-form" class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Role switcher -->
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Simulate Profile Role</label>
+                  <select id="settings-role" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                    <option value="Farmer">Farmer / Farm Owner</option>
+                    <option value="Worker">Worker / Field Laborer</option>
+                    <option value="Admin">Administrator</option>
+                  </select>
+                  <p class="text-[10px] text-slate-400 mt-1">Switches access controls to demonstrate view capabilities</p>
+                </div>
+                <!-- Unit preferences -->
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Measurement Unit Preference</label>
+                  <select id="settings-unit" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                    <option value="Metric">Metric (Hectares, °C, Tons)</option>
+                    <option value="Imperial">Imperial (Acres, °F, Tons)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- OpenWeatherMap configuration -->
+              <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">OpenWeatherMap API Key</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                    <i class="fas fa-key"></i>
+                  </span>
+                  <input id="settings-api-key" type="password" placeholder="Paste your API key (leave blank to run simulated weather)" class="w-full border border-slate-200 rounded-xl pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                </div>
+                <p class="text-[10px] text-slate-400 mt-1">Configure to load live weather warnings based on GPS fields. Free-tier key supported.</p>
+              </div>
+
+              <!-- Gov API configuration -->
+              <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">data.gov.in API Key (Optional)</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                    <i class="fas fa-lock"></i>
+                  </span>
+                  <input id="settings-gov-key" type="password" placeholder="Paste data.gov.in API key to fetch live variety prices" class="w-full border border-slate-200 rounded-xl pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                </div>
+                <p class="text-[10px] text-slate-400 mt-1">Get a free key on open government data portal (data.gov.in) to query live market yards.</p>
+              </div>
+
+              <div class="pt-4 border-t border-slate-100 flex justify-end">
+                <button type="submit" class="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition">
+                  Save settings & Apply
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Reset data / info panel -->
+          <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+            <div>
+              <h3 class="font-bold text-slate-800 text-base mb-3 border-b border-slate-100 pb-2">Academic Project Details</h3>
+              <p class="text-xs text-slate-500 leading-relaxed mb-4">
+                This client-side dashboard simulates real database actions using `localStorage` schemas. Initial fields, sowing history, activities, and yield logs are loaded dynamically so the application appears complete.
+              </p>
+              <div class="bg-amber-50 border border-amber-100 text-amber-800 rounded-xl p-3 text-[11px] leading-normal font-medium mb-4">
+                <i class="fas fa-circle-exclamation text-amber-500 mr-1"></i>
+                For worker roles, editing settings, financial values, and adding lands is disabled.
+              </div>
+            </div>
+            
+            <button onclick="app.resetAllData()" class="w-full py-2.5 border border-red-200 text-red-500 font-bold hover:bg-red-50 text-xs rounded-xl transition">
+              Reset Database to Defaults
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ============================================== -->
+  <!-- MODAL: ADD FIELD -->
+  <!-- ============================================== -->
+  <div id="add-field-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <h3 class="font-black text-slate-800 text-base">Register New Field Block</h3>
+        <button onclick="app.closeModal('add-field-modal')" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fas fa-times"></i></button>
+      </div>
+
+      <form id="add-field-form" class="flex-grow overflow-y-auto p-6 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Field name -->
+          <div class="md:col-span-2">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Field Name</label>
+            <input id="field-name" type="text" placeholder="e.g. South Corn Field" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+          </div>
+          <!-- Soil type -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Soil Type</label>
+            <select id="field-soil-type" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+              <option value="Loam">Loam</option>
+              <option value="Clay Loam">Clay Loam</option>
+              <option value="Sandy Loam">Sandy Loam</option>
+              <option value="Silt">Silt</option>
+              <option value="Clay">Clay</option>
+              <option value="Black Cotton">Black Cotton</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Area size -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Area (Acres)</label>
+            <input id="field-area" type="number" step="0.1" placeholder="e.g. 10" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+          </div>
+          <!-- Latitude picker (read only or input) -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Latitude</label>
+            <input id="field-lat" type="number" step="0.000001" placeholder="Click map below" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" readonly>
+          </div>
+          <!-- Longitude picker -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Longitude</label>
+            <input id="field-lng" type="number" step="0.000001" placeholder="Click map below" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" readonly>
+          </div>
+        </div>
+
+        <!-- Coordinates Picker Map -->
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Interactive GPS Location Pin</label>
+          <p class="text-[10px] text-slate-400 mb-2">Select the approximate location on the map below. A boundary area will be computed based on acres.</p>
+          <div id="field-picker-map"></div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 flex justify-end space-x-2">
+          <button type="button" onclick="app.closeModal('add-field-modal')" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition">Save Field</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: ASSIGN CROP -->
+  <!-- ============================================== -->
+  <div id="add-crop-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <h3 class="font-black text-slate-800 text-base">Assign Crop Cultivation</h3>
+        <button onclick="app.closeModal('add-crop-modal')" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fas fa-times"></i></button>
+      </div>
+
+      <form id="add-crop-form" class="p-6 space-y-4">
+        <!-- Field select -->
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Assign Field Block</label>
+          <select id="crop-field-select" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+            <!-- Loaded via JS -->
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Crop name -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Crop Name</label>
+            <input id="crop-name" type="text" placeholder="e.g. Maize" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+          </div>
+          <!-- Variety -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Seed Variety</label>
+            <input id="crop-variety" type="text" placeholder="e.g. Pioneer 30G30" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Sowing date -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Sowing Date</label>
+            <input id="crop-sowing" type="date" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+          </div>
+          <!-- Harvest target date -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Expected Harvest Date</label>
+            <input id="crop-harvest" type="date" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Cultivation Notes / Instructions</label>
+          <textarea id="crop-notes" placeholder="Enter specifications (fertilizer intervals, weeding stages)" rows="2" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></textarea>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 flex justify-end space-x-2">
+          <button type="button" onclick="app.closeModal('add-crop-modal')" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition">Assign Crop</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: LOG ACTIVITY -->
+  <!-- ============================================== -->
+  <div id="add-activity-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <h3 class="font-black text-slate-800 text-base">Record Operational Activity</h3>
+        <button onclick="app.closeModal('add-activity-modal')" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fas fa-times"></i></button>
+      </div>
+
+      <form id="add-activity-form" class="p-6 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Field select -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Target Field</label>
+            <select id="act-field-select" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+              <!-- Loaded via JS -->
+            </select>
+          </div>
+          <!-- Activity Type -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Activity Type</label>
+            <select id="act-type" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+              <option value="Irrigation">Irrigation</option>
+              <option value="Fertilizer">Fertilizer Application</option>
+              <option value="Pesticide">Pesticide Spray</option>
+              <option value="Weeding">Weeding / Interculture</option>
+              <option value="Soil Test">Soil Testing</option>
+              <option value="Pruning">Pruning/Clearing</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Log Date -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Execution Date</label>
+            <input id="act-date" type="date" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+          </div>
+          <!-- Expenditure Cost -->
+          <div class="role-finance">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Associated Cost ($)</label>
+            <input id="act-cost" type="number" placeholder="e.g. 150" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+          </div>
+        </div>
+
+        <!-- Description Details -->
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Activity Description / Quantities</label>
+          <textarea id="act-details" placeholder="e.g. Urea application 50kg, sprinkler running time etc." rows="3" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></textarea>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 flex justify-end space-x-2">
+          <button type="button" onclick="app.closeModal('add-activity-modal')" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition">Log Activity</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: UPDATE GROWTH STAGE -->
+  <!-- ============================================== -->
+  <div id="update-stage-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <h3 class="font-black text-slate-800 text-base">Update Crop Growth Stage</h3>
+        <button onclick="app.closeModal('update-stage-modal')" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fas fa-times"></i></button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Select Growth Stage</label>
+          <select id="update-stage-select" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+            <option value="Sown">Sown (Emergence)</option>
+            <option value="Vegetative">Vegetative Growth</option>
+            <option value="Flowering">Flowering Stage</option>
+            <option value="Ready for Harvest">Ready for Harvest</option>
+          </select>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 flex justify-end space-x-2">
+          <button onclick="app.closeModal('update-stage-modal')" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition">Cancel</button>
+          <button onclick="app.handleUpdateStage()" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition">Update Stage</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: HARVEST RECORD -->
+  <!-- ============================================== -->
+  <div id="harvest-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <h3 id="harvest-crop-title" class="font-black text-slate-800 text-base">Record Harvest Details</h3>
+        <button onclick="app.closeModal('harvest-modal')" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fas fa-times"></i></button>
+      </div>
+
+      <form id="harvest-form" class="p-6 space-y-4" onsubmit="event.preventDefault(); app.handleRecordHarvest();">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Harvest Quantity -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Total Yield (Tons)</label>
+            <input id="harvest-quantity" type="number" step="0.1" placeholder="e.g. 45" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+          </div>
+          <!-- Season -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Harvesting Season</label>
+            <select id="harvest-season" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+              <option value="Kharif 2026">Kharif 2026</option>
+              <option value="Rabi 2025-26">Rabi 2025-26</option>
+              <option value="Kharif 2025">Kharif 2025</option>
+              <option value="Zaid 2026">Zaid 2026</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Harvest Cost -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Harvesting Cost ($)</label>
+            <input id="harvest-cost" type="number" placeholder="e.g. 1500" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+          </div>
+          <!-- Sale Revenue -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Sale Revenue ($)</label>
+            <input id="harvest-revenue" type="number" placeholder="e.g. 9000" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+          </div>
+        </div>
+
+        <!-- Harvest Date -->
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Actual Harvesting Date</label>
+          <input id="harvest-date" type="date" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 flex justify-end space-x-2">
+          <button type="button" onclick="app.closeModal('harvest-modal')" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition">Log Harvest</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: FIELD DETAILS & LOGS -->
+  <!-- ============================================== -->
+  <div id="field-detail-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div>
+          <h3 id="detail-field-name" class="font-black text-slate-800 text-base">Field Details</h3>
+          <span id="detail-coords" class="text-[10px] text-slate-400 font-bold block">18.5254, 73.8587</span>
+        </div>
+        <button onclick="app.closeModal('field-detail-modal')" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fas fa-times"></i></button>
+      </div>
+
+      <div class="flex-grow overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <!-- Left details panel -->
+        <div class="md:col-span-1 space-y-4 border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 md:pr-4">
+          <div class="bg-slate-50 border border-slate-100 rounded-xl p-3.5 space-y-3">
+            <div>
+              <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Field Area Size</span>
+              <p id="detail-area" class="font-extrabold text-slate-700 text-sm">12.5 Acres</p>
+            </div>
+            <div>
+              <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Soil Composition</span>
+              <p id="detail-soil" class="font-extrabold text-slate-700 text-sm">Loam Soil</p>
+            </div>
+          </div>
+
+          <!-- Live Mandi Rate Card -->
+          <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-[11px] leading-relaxed text-emerald-900 font-semibold space-y-1">
+            <p class="flex items-center text-xs text-emerald-800 font-bold mb-1">
+              <i class="fas fa-coins mr-1 text-emerald-600"></i> Live Market Rate (Agmarknet)
+            </p>
+            <div id="detail-mandi-match">
+              Loading rate match...
+            </div>
+          </div>
+
+          <!-- Live IoT Sensor Conditions Card -->
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-[11px] leading-relaxed text-slate-800 space-y-2">
+            <p class="flex items-center text-xs text-slate-700 font-bold border-b border-slate-100 pb-1 mb-1">
+              <i class="fas fa-microchip mr-1.5 text-slate-500"></i> Live IoT Readings
+            </p>
+            <div id="detail-iot-readings" class="space-y-1.5">
+              <!-- Loaded dynamically -->
+            </div>
+          </div>
+          
+          <div class="bg-emerald-50/50 border border-emerald-100/50 rounded-xl p-3 text-[11px] leading-relaxed text-emerald-800 font-medium">
+            <i class="fas fa-leaf text-emerald-600 mr-1"></i>
+            This detail drawer consolidates the past crop rotation cycles and recent chemical/irrigation applications logged specifically for this block of land.
+          </div>
+        </div>
+
+        <!-- Right logs tabs panel -->
+        <div class="md:col-span-2 space-y-4">
+          <!-- Crop History list -->
+          <div>
+            <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2 flex items-center space-x-1.5">
+              <i class="fas fa-history text-slate-400"></i>
+              <span>Crop Cultivation Cycles</span>
+            </h4>
+            <ul id="detail-crop-history" class="space-y-2 max-h-40 overflow-y-auto pr-1">
+              <!-- JS Injections -->
+            </ul>
+          </div>
+
+          <!-- Activity logs list -->
+          <div>
+            <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2 flex items-center space-x-1.5">
+              <i class="fas fa-list-check text-slate-400"></i>
+              <span>Recent Activity Logs</span>
+            </h4>
+            <ul id="detail-activities-log" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <!-- JS Injections -->
+            </ul>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+        <button onclick="app.closeModal('field-detail-modal')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition">Close Drawer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPTS LOADINGS -->
+  <script src="mockData.js"></script>
+  <script src="weather.js"></script>
+  <script src="map.js"></script>
+  <script src="market.js"></script>
+  <script src="sensors.js"></script>
+  <script src="charts.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
