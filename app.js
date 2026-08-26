@@ -12,6 +12,9 @@ class App {
 
   async init() {
     await this.loadSettings();
+    if (window.sensorManager) {
+      await window.sensorManager.initDatabase();
+    }
     this.setupViewRouter();
     this.setupEventListeners();
     await this.refreshAllData();
@@ -272,7 +275,7 @@ class App {
 
     // Scheduled activities = active sensor alerts + triggered price alerts
     const sensorAlertsCount = window.sensorManager ? window.sensorManager.getSensorAlerts().length : 0;
-    const priceAlertsCount = window.marketPriceManager ? window.marketPriceManager.checkAlerts().filter(a => a.isTriggered).length : 0;
+    const priceAlertsCount = window.marketPriceManager ? (await window.marketPriceManager.checkAlerts()).filter(a => a.isTriggered).length : 0;
     const tasksDue = sensorAlertsCount + priceAlertsCount;
 
     // Average Yield
