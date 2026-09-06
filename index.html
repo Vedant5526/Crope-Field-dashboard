@@ -254,31 +254,31 @@
       <nav class="space-y-1">
         <a href="#" data-target-view="overview" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-sm bg-emerald-600 text-white transition">
           <i class="fas fa-chart-pie w-5 text-center text-lg"></i>
-          <span>Overview</span>
+          <span data-i18n="nav.overview">Overview</span>
         </a>
         <a href="#" data-target-view="fields" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 transition">
           <i class="fas fa-map-marked-alt w-5 text-center text-lg"></i>
-          <span>Fields</span>
+          <span data-i18n="nav.fields">Fields</span>
         </a>
         <a href="#" data-target-view="crops" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 transition">
           <i class="fas fa-wheat-awn w-5 text-center text-lg"></i>
-          <span>Crops</span>
+          <span data-i18n="nav.crops">Crops</span>
         </a>
         <a href="#" data-target-view="market" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 transition">
           <i class="fas fa-coins w-5 text-center text-lg"></i>
-          <span>Market Prices</span>
+          <span data-i18n="nav.market">Market Prices</span>
         </a>
         <a href="#" data-target-view="sensors" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 transition">
           <i class="fas fa-microchip w-5 text-center text-lg"></i>
-          <span>Sensors Telemetry</span>
+          <span data-i18n="nav.sensors">Sensors Telemetry</span>
         </a>
         <a href="#" data-target-view="reports" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 transition role-finance">
           <i class="fas fa-file-invoice-dollar w-5 text-center text-lg"></i>
-          <span>Reports & Yields</span>
+          <span data-i18n="nav.reports">Reports & Yields</span>
         </a>
         <a href="#" data-target-view="settings" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 transition">
           <i class="fas fa-sliders w-5 text-center text-lg"></i>
-          <span>Settings</span>
+          <span data-i18n="nav.settings">Settings</span>
         </a>
       </nav>
     </div>
@@ -295,10 +295,17 @@
     <!-- Top Header bar -->
     <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between no-print">
       <div>
-        <h2 class="text-xl font-extrabold text-slate-800">Crop and Field Management System</h2>
+        <h2 data-i18n="header.title" class="text-xl font-extrabold text-slate-800">Crop & Field Management Dashboard</h2>
         <p class="text-xs text-slate-400">Interactive farming operations monitoring & analysis</p>
       </div>
       <div class="flex items-center space-x-4">
+        <!-- Language Selector -->
+        <select id="lang-selector" onchange="window.setLanguage(this.value)" class="bg-slate-100 border border-slate-200 text-xs font-bold text-slate-600 rounded-lg px-2 py-1.5 outline-none cursor-pointer focus:ring-2 focus:ring-emerald-500">
+          <option value="en">English</option>
+          <option value="hi">हिंदी (Hindi)</option>
+          <option value="mr">मराठी (Marathi)</option>
+        </select>
+        
         <!-- Logged-in user chip -->
         <div class="hidden sm:flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5">
           <span class="text-emerald-700 text-sm">&#127807;</span>
@@ -1178,6 +1185,7 @@
   </div>
 
   <!-- SCRIPTS LOADINGS -->
+  <script src="i18n.js?v=1"></script>
   <script src="mockData.js"></script>
   <script src="weather.js?v=2"></script>
   <script src="market.js?v=2"></script>
