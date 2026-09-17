@@ -1,122 +1,194 @@
-const translations = {
-  en: {
-    // Navigation
-    "nav.overview": "Overview", "nav.fields": "Fields", "nav.crops": "Crops",
-    "nav.reports": "Reports & Yields", "nav.history": "History & Logs",
-    "nav.market": "Market Prices", "nav.sensors": "Sensors Telemetry",
-    "nav.settings": "Settings", "nav.logout": "Log Out", "header.logout": "Sign Out",
-    "header.title": "Crop & Field Management Dashboard",
 
-    // Views
-    "view.overview": "Dashboard Overview", "view.fields": "Field Management Directory",
-    "view.crops": "Crop Cycle Planner", "view.history": "History & Logs",
-    "view.market": "Mandi Price Checker", "view.sensors": "IoT Sensor Networks",
-    "view.reports": "Yield Analytics & Financial Reports", "view.settings": "Farm Profile & System Settings",
-
-    // Stats
-    "stat.area": "Total Fields Area", "stat.crops": "Active Crops",
-    "stat.yields": "Recent Yields", "stat.alerts": "Active Alerts",
-
-    // Titles
-    "title.upcoming": "Upcoming Activities", "title.alerts": "Recent Alerts",
-
-    // Buttons
-    "btn.addField": "+ Register New Field", "btn.addCrop": "+ Assign New Crop",
-
-    // Table Headers
-    "th.fieldName": "Field Name", "th.area": "Area (Acres)", "th.soilType": "Soil Type",
-    "th.currentCrop": "Current Crop", "th.status": "Status", "th.actions": "Actions",
-    "th.cropName": "Crop Name", "th.variety": "Variety", "th.sowingDate": "Sowing Date",
-    "th.expectedHarvest": "Expected Harvest",
-
-    // Labels
-    "label.fieldName": "Field Name", "label.soilType": "Soil Type", "label.area": "Area (Acres)",
-    "modal.newField": "Register New Field Block"
-  },
+const autoDict = {
   hi: {
-    // Navigation
-    "nav.overview": "अवलोकन", "nav.fields": "खेत (Fields)", "nav.crops": "फसलें (Crops)",
-    "nav.reports": "रिपोर्ट", "nav.history": "इतिहास और लॉग",
-    "nav.market": "मंडी भाव", "nav.sensors": "सेंसर डेटा",
-    "nav.settings": "सेटिंग्स", "nav.logout": "लॉग आउट", "header.logout": "लॉग आउट",
-    "header.title": "फसल और खेत प्रबंधन डैशबोर्ड",
-
-    // Views
-    "view.overview": "डैशबोर्ड अवलोकन", "view.fields": "खेत प्रबंधन",
-    "view.crops": "फसल चक्र योजनाकार", "view.history": "इतिहास और लॉग",
-    "view.market": "मंडी भाव जांचक", "view.sensors": "IoT सेंसर नेटवर्क",
-    "view.reports": "पैदावार विश्लेषण और रिपोर्ट", "view.settings": "फार्म प्रोफाइल और सेटिंग्स",
-
-    // Stats
-    "stat.area": "कुल खेत क्षेत्र", "stat.crops": "सक्रिय फसलें",
-    "stat.yields": "हाल की पैदावार", "stat.alerts": "सक्रिय अलर्ट",
-
-    // Titles
-    "title.upcoming": "आगामी गतिविधियां", "title.alerts": "हाल के अलर्ट",
-
-    // Buttons
-    "btn.addField": "+ नया खेत जोड़ें", "btn.addCrop": "+ नई फसल जोड़ें",
-
-    // Table Headers
-    "th.fieldName": "खेत का नाम", "th.area": "क्षेत्र (एकड़)", "th.soilType": "मिट्टी का प्रकार",
-    "th.currentCrop": "वर्तमान फसल", "th.status": "स्थिति", "th.actions": "कार्य",
-    "th.cropName": "फसल का नाम", "th.variety": "किस्म", "th.sowingDate": "बुवाई की तारीख",
-    "th.expectedHarvest": "संभावित कटाई",
-
-    // Labels
-    "label.fieldName": "खेत का नाम", "label.soilType": "मिट्टी का प्रकार", "label.area": "क्षेत्र (एकड़)",
-    "modal.newField": "नया खेत पंजीकृत करें"
-  },
+    "Overview": "अवलोकन",
+    "Fields": "खेत",
+    "Crops": "फसलें",
+    "Reports & Yields": "रिपोर्ट और पैदावार",
+    "History & Logs": "इतिहास और लॉग",
+    "Market Prices": "मंडी भाव",
+    "Sensors Telemetry": "सेंसर डेटा",
+    "Settings": "सेटिंग्स",
+    "Log Out": "लॉग आउट",
+    "Sign Out": "साइन आउट",
+    "Dashboard Overview": "डैशबोर्ड अवलोकन",
+    "Field Management Directory": "खेत प्रबंधन निर्देशिका",
+    "Crop Cycle Planner": "फसल चक्र योजनाकार",
+    "Mandi Price Checker": "मंडी भाव जांचक",
+    "IoT Sensor Networks": "IoT सेंसर नेटवर्क",
+    "Yield Analytics & Financial Reports": "पैदावार विश्लेषण और वित्तीय रिपोर्ट",
+    "Farm Profile & System Settings": "फार्म प्रोफाइल और सिस्टम सेटिंग्स",
+    "Total Fields Area": "कुल खेत क्षेत्र",
+    "Active Crops": "सक्रिय फसलें",
+    "Recent Yields": "हाल की पैदावार",
+    "Active Alerts": "सक्रिय अलर्ट",
+    "Upcoming Activities": "आगामी गतिविधियां",
+    "Recent Alerts": "हाल के अलर्ट",
+    "+ Register New Field": "+ नया खेत पंजीकृत करें",
+    "+ Assign New Crop": "+ नई फसल असाइन करें",
+    "Field Name": "खेत का नाम",
+    "Area (Acres)": "क्षेत्र (एकड़)",
+    "Soil Type": "मिट्टी का प्रकार",
+    "Current Crop": "वर्तमान फसल",
+    "Status": "स्थिति",
+    "Actions": "कार्रवाइयां",
+    "Crop Name": "फसल का नाम",
+    "Variety": "किस्म",
+    "Sowing Date": "बुवाई की तारीख",
+    "Expected Harvest": "संभावित कटाई",
+    "Register New Field Block": "नया खेत ब्लॉक पंजीकृत करें",
+    "Add Log Entry": "लॉग एंट्री जोड़ें",
+    "Sensors": "सेंसर",
+    "Field Logbook": "खेत की लॉगबुक",
+    "Recent IoT Readings": "हालिया IoT रीडिंग",
+    "Wheat": "गेहूं",
+    "Rice": "चावल",
+    "Sugarcane": "गन्ना",
+    "Cotton": "कपास",
+    "Soybean": "सोयाबीन",
+    "Maize": "मक्का",
+    "Black Soil": "काली मिट्टी",
+    "Red Soil": "लाल मिट्टी",
+    "Loamy": "दोमट",
+    "Alluvial": "जलोढ़",
+    "Active": "सक्रिय",
+    "Ready for Harvest": "कटाई के लिए तैयार",
+    "Harvested": "कटाई हो गई",
+    "Fallow": "परती",
+    "Date & Time": "दिनांक और समय",
+    "Moisture%": "नमी%",
+    "Temp°C": "तापमान°C",
+    "Humidity": "नमी",
+    "N-P-K": "N-P-K",
+    "Soil pH": "मिट्टी का pH",
+    "Commodity": "वस्तु",
+    "Market": "मंडी",
+    "Min Price": "न्यूनतम मूल्य",
+    "Max Price": "अधिकतम मूल्य",
+    "Modal Price": "औसत मूल्य",
+    "Arrival Date": "आगमन तिथि",
+    "View": "देखें",
+    "Edit": "संपादित करें",
+    "Delete": "हटाएं",
+    "Save": "सहेजें",
+    "Cancel": "रद्द करें",
+    "Submit": "जमा करें",
+    "Update Settings": "सेटिंग्स अपडेट करें",
+    "Save Changes": "परिवर्तन सहेजें",
+    "Theme": "थीम",
+    "Light Mode": "लाइट मोड",
+    "Dark Mode": "डार्क मोड",
+    "Language": "भाषा",
+    "Role": "भूमिका",
+    "Farmer": "किसान",
+    "Admin": "व्यवस्थापक",
+    "Worker": "कार्यकर्ता",
+    "Loading...": "लोड हो रहा है...",
+    "No data available.": "कोई डेटा उपलब्ध नहीं है।",
+    "No past history or logs recorded for this field.": "इस खेत के लिए कोई पिछला इतिहास या लॉग दर्ज नहीं है।"
+},
   mr: {
-    // Navigation
-    "nav.overview": "विहंगावलोकन", "nav.fields": "शेत (Fields)", "nav.crops": "पिके (Crops)",
-    "nav.reports": "अहवाल", "nav.history": "इतिहास आणि नोंदी",
-    "nav.market": "बाजार भाव", "nav.sensors": "सेन्सर डेटा",
-    "nav.settings": "सेटिंग्ज", "nav.logout": "लॉग आउट", "header.logout": "लॉग आउट",
-    "header.title": "पीक आणि शेत व्यवस्थापन डॅशबोर्ड",
-
-    // Views
-    "view.overview": "डॅशबोर्ड विहंगावलोकन", "view.fields": "शेत व्यवस्थापन",
-    "view.crops": "पीक चक्र नियोजक", "view.history": "इतिहास आणि नोंदी",
-    "view.market": "बाजार भाव तपासक", "view.sensors": "IoT सेन्सर नेटवर्क",
-    "view.reports": "उत्पन्न विश्लेषण आणि अहवाल", "view.settings": "शेत प्रोफाइल आणि सेटिंग्ज",
-
-    // Stats
-    "stat.area": "एकूण शेत क्षेत्र", "stat.crops": "सक्रिय पिके",
-    "stat.yields": "अलीकडील उत्पन्न", "stat.alerts": "सक्रिय अलर्ट",
-
-    // Titles
-    "title.upcoming": "आगामी उपक्रम", "title.alerts": "अलीकडील अलर्ट",
-
-    // Buttons
-    "btn.addField": "+ नवीन शेत जोडा", "btn.addCrop": "+ नवीन पीक जोडा",
-
-    // Table Headers
-    "th.fieldName": "शेताचे नाव", "th.area": "क्षेत्र (एकर)", "th.soilType": "मातीचा प्रकार",
-    "th.currentCrop": "सध्याचे पीक", "th.status": "स्थिती", "th.actions": "क्रिया",
-    "th.cropName": "पिकाचे नाव", "th.variety": "जात", "th.sowingDate": "पेरणीची तारीख",
-    "th.expectedHarvest": "अपेक्षित काढणी",
-
-    // Labels
-    "label.fieldName": "शेताचे नाव", "label.soilType": "मातीचा प्रकार", "label.area": "क्षेत्र (एकर)",
-    "modal.newField": "नवीन शेत नोंदणी करा"
-  }
+    "Overview": "विहंगावलोकन",
+    "Fields": "शेत",
+    "Crops": "पिके",
+    "Reports & Yields": "अहवाल आणि उत्पन्न",
+    "History & Logs": "इतिहास आणि नोंदी",
+    "Market Prices": "बाजार भाव",
+    "Sensors Telemetry": "सेन्सर डेटा",
+    "Settings": "सेटिंग्ज",
+    "Log Out": "लॉग आउट",
+    "Sign Out": "साइन आउट",
+    "Dashboard Overview": "डॅशबोर्ड विहंगावलोकन",
+    "Field Management Directory": "शेत व्यवस्थापन निर्देशिका",
+    "Crop Cycle Planner": "पीक चक्र नियोजक",
+    "Mandi Price Checker": "बाजार भाव तपासक",
+    "IoT Sensor Networks": "IoT सेन्सर नेटवर्क",
+    "Yield Analytics & Financial Reports": "उत्पन्न विश्लेषण आणि आर्थिक अहवाल",
+    "Farm Profile & System Settings": "शेत प्रोफाइल आणि सिस्टम सेटिंग्ज",
+    "Total Fields Area": "एकूण शेत क्षेत्र",
+    "Active Crops": "सक्रिय पिके",
+    "Recent Yields": "अलीकडील उत्पन्न",
+    "Active Alerts": "सक्रिय अलर्ट",
+    "Upcoming Activities": "आगामी उपक्रम",
+    "Recent Alerts": "अलीकडील अलर्ट",
+    "+ Register New Field": "+ नवीन शेत नोंदणी करा",
+    "+ Assign New Crop": "+ नवीन पीक नियुक्त करा",
+    "Field Name": "शेताचे नाव",
+    "Area (Acres)": "क्षेत्र (एकर)",
+    "Soil Type": "मातीचा प्रकार",
+    "Current Crop": "सध्याचे पीक",
+    "Status": "स्थिती",
+    "Actions": "क्रिया",
+    "Crop Name": "पिकाचे नाव",
+    "Variety": "जात",
+    "Sowing Date": "पेरणीची तारीख",
+    "Expected Harvest": "अपेक्षित काढणी",
+    "Register New Field Block": "नवीन शेत ब्लॉक नोंदणी करा",
+    "Add Log Entry": "लॉग एंट्री जोडा",
+    "Sensors": "सेन्सर",
+    "Field Logbook": "शेताची लॉगबुक",
+    "Recent IoT Readings": "अलीकडील IoT रीडिंग",
+    "Wheat": "गहू",
+    "Rice": "तांदूळ",
+    "Sugarcane": "ऊस",
+    "Cotton": "कापूस",
+    "Soybean": "सोयाबीन",
+    "Maize": "मका",
+    "Black Soil": "काळी माती",
+    "Red Soil": "लाल माती",
+    "Loamy": "पोयटा",
+    "Alluvial": "गाळाची माती",
+    "Active": "सक्रिय",
+    "Ready for Harvest": "काढणीस तयार",
+    "Harvested": "काढणी झाली",
+    "Fallow": "पडीक",
+    "Date & Time": "दिनांक आणि वेळ",
+    "Moisture%": "ओलावा%",
+    "Temp°C": "तापमान°C",
+    "Humidity": "आर्द्रता",
+    "N-P-K": "N-P-K",
+    "Soil pH": "मातीचा pH",
+    "Commodity": "शेतमाल",
+    "Market": "बाजार",
+    "Min Price": "किमान किंमत",
+    "Max Price": "कमाल किंमत",
+    "Modal Price": "सर्वसाधारण किंमत",
+    "Arrival Date": "आवक तारीख",
+    "View": "पहा",
+    "Edit": "संपादित करा",
+    "Delete": "हटवा",
+    "Save": "जतन करा",
+    "Cancel": "रद्द करा",
+    "Submit": "सबमिट करा",
+    "Update Settings": "सेटिंग्ज अपडेट करा",
+    "Save Changes": "बदल जतन करा",
+    "Theme": "थीम",
+    "Light Mode": "लाइट मोड",
+    "Dark Mode": "डार्क मोड",
+    "Language": "भाषा",
+    "Role": "भूमिका",
+    "Farmer": "शेतकरी",
+    "Admin": "प्रशासक",
+    "Worker": "कामगार",
+    "Loading...": "लोड होत आहे...",
+    "No data available.": "कोणताही डेटा उपलब्ध नाही.",
+    "No past history or logs recorded for this field.": "या शेतासाठी कोणताही मागील इतिहास किंवा नोंदी नाहीत."
+}
 };
 
 let currentLang = localStorage.getItem('app_lang') || 'en';
 
 window.t = function(key) {
-  return translations[currentLang][key] || translations['en'][key] || key;
+  if (currentLang === 'en') return key;
+  return (autoDict[currentLang] && autoDict[currentLang][key]) || key;
 }
 
 window.setLanguage = function(lang) {
-  if (!translations[lang]) return;
   currentLang = lang;
   localStorage.setItem('app_lang', lang);
   
-  translateDOM(document.body);
+  translateNodeText(document.body);
 
-  // Re-render dynamic components so JS templates get updated
   if (window.app) {
     if (typeof window.app.renderOverviewStats === 'function') window.app.renderOverviewStats();
     if (typeof window.app.renderFieldsList === 'function') window.app.renderFieldsList();
@@ -124,32 +196,77 @@ window.setLanguage = function(lang) {
   }
 }
 
-function translateDOM(root) {
-  root.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n');
-    if (translations[currentLang] && translations[currentLang][key]) {
-      if (el.tagName === 'INPUT' && el.hasAttribute('placeholder')) {
-        el.setAttribute('placeholder', translations[currentLang][key]);
-      } else {
-        el.textContent = translations[currentLang][key];
-      }
-    }
-  });
+// We need to keep a map of original strings so we can switch back to English or from Hi->Mr.
+// The easiest way is to add a data-original-text attribute to text nodes. But text nodes can't have attributes.
+// Instead we wrap text nodes in a span if they exactly match our dictionary keys, or we just store it in a WeakMap.
+// Since WeakMap for TextNodes works in modern browsers:
+const originalTextMap = new WeakMap();
+
+// Create a reverse mapping so if the DOM already has Hindi, we know the English equivalent
+const reverseDict = {
+  hi: {},
+  mr: {}
+};
+for (let key in autoDict.hi) reverseDict.hi[autoDict.hi[key]] = key;
+for (let key in autoDict.mr) reverseDict.mr[autoDict.mr[key]] = key;
+
+function getOriginalText(str) {
+   let trimmed = str.trim();
+   if (reverseDict.hi[trimmed]) return reverseDict.hi[trimmed];
+   if (reverseDict.mr[trimmed]) return reverseDict.mr[trimmed];
+   return trimmed;
 }
 
-// Observe DOM for dynamic inserts
+function translateNodeText(node) {
+  if (node.nodeType === 3) { // TEXT_NODE
+    let original = originalTextMap.get(node);
+    if (!original) {
+      original = getOriginalText(node.nodeValue);
+      if (original) originalTextMap.set(node, original);
+    }
+    
+    if (original && original.trim() !== '') {
+      let translated = window.t(original);
+      if (translated !== original) {
+         let wsRegex = /^(\s*)(.*?)(\s*)$/;
+         let match = node.nodeValue.match(wsRegex);
+         if (match) {
+            node.nodeValue = match[1] + translated + match[3];
+         } else {
+            node.nodeValue = translated;
+         }
+      } else if (currentLang === 'en') {
+         let wsRegex = /^(\s*)(.*?)(\s*)$/;
+         let match = node.nodeValue.match(wsRegex);
+         if (match) {
+            node.nodeValue = match[1] + original + match[3];
+         } else {
+            node.nodeValue = original;
+         }
+      }
+    }
+  } else if (node.nodeType === 1) { // ELEMENT_NODE
+    if (node.tagName === 'SCRIPT' || node.tagName === 'STYLE') return;
+    
+    // Also translate placeholders
+    if (node.tagName === 'INPUT' && node.hasAttribute('placeholder')) {
+       let pOrig = node.getAttribute('data-orig-placeholder');
+       if (!pOrig) {
+           pOrig = node.getAttribute('placeholder');
+           node.setAttribute('data-orig-placeholder', pOrig);
+       }
+       let translatedP = window.t(pOrig);
+       node.setAttribute('placeholder', translatedP);
+    }
+    
+    node.childNodes.forEach(child => translateNodeText(child));
+  }
+}
+
 const observer = new MutationObserver(mutations => {
   mutations.forEach(mutation => {
     mutation.addedNodes.forEach(node => {
-      if (node.nodeType === 1) { // ELEMENT_NODE
-        if (node.hasAttribute && node.hasAttribute('data-i18n')) {
-          const key = node.getAttribute('data-i18n');
-          if (translations[currentLang] && translations[currentLang][key]) {
-             node.textContent = translations[currentLang][key];
-          }
-        }
-        translateDOM(node);
-      }
+      translateNodeText(node);
     });
   });
 });
@@ -158,6 +275,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const selector = document.getElementById('lang-selector');
   if (selector) selector.value = currentLang;
   
-  translateDOM(document.body);
+  translateNodeText(document.body);
   observer.observe(document.body, { childList: true, subtree: true });
 });
