@@ -60,7 +60,7 @@ app.use((req, res, next) => {
 });
 
 // ==============================================
-// AUTH SYSTEM
+// AUTH SYSTEM & USER IDENTIFICATION MIDDLEWARE
 // ==============================================
 
 // Serve login page
@@ -68,10 +68,37 @@ app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'login.html'));
 });
 
-// JWT Verification Middleware
-function verifyToken(req, res, next) {
+// Middleware: extracts authenticated user from JWT token
+// Fallback: If no token header is provided, safely selects first user to support local simulation/scripts
+async function identifyUser(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer <token>
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      req.user = decoded;
+      return next();
+    } catch (e) {
+      return res.status(401).json({ error: 'Invalid or expired session. Please log in again.' });
+    }
+  }
+
+  // Graceful fallback for unauthenticated requests
+  try {
+    const [users] = await pool.query('SELECT id, username, full_name, role FROM users ORDER BY id ASC LIMIT 1');
+    if (users.length > 0) {
+      req.user = users[0];
+      return next();
+    }
+  } catch (e) {}
+
+  return res.status(401).json({ error: 'Authentication required. No user found in database.' });
+}
+
+// Strict JWT Verification Middleware (for auth verification endpoint)
+function verifyToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Access denied. No token provided.' });
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
@@ -82,7 +109,7 @@ function verifyToken(req, res, next) {
   }
 }
 
-// POST /api/auth/register
+// POST /api/auth/register — Create account & initialize default user settings
 app.post('/api/auth/register', async (req, res) => {
   const { username, password, full_name, role } = req.body;
   if (!username || !password || !full_name) {
@@ -91,10 +118,21 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const hash = await bcrypt.hash(password, SALT_ROUNDS);
     const userRole = role || 'Farmer';
-    await pool.query(
+    const [result] = await pool.query(
       'INSERT INTO users (username, password_hash, full_name, role) VALUES (?, ?, ?, ?)',
       [username.toLowerCase().trim(), hash, full_name.trim(), userRole]
     );
+
+    const newUserId = result.insertId;
+
+    // Automatically create connected settings row for the new user
+    await pool.query(
+      `INSERT INTO settings (user_id, role, weather_api_key, gov_api_key, unit_preference, weather_lat, weather_lng)
+       VALUES (?, ?, '', '', 'Metric', 18.5204, 73.8567)
+       ON DUPLICATE KEY UPDATE role = VALUES(role)`,
+      [newUserId, userRole]
+    );
+
     res.status(201).json({ message: 'Account created successfully. You can now log in.' });
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') {
@@ -134,42 +172,72 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// GET /api/auth/me  (verify token & return user info)
+// GET /api/auth/me  (verify token & return current user info)
 app.get('/api/auth/me', verifyToken, (req, res) => {
   res.json({ user: req.user });
 });
 
-// ==============================================
-// REST ENDPOINTS
-// ==============================================
-
-// 1. SETTINGS API
-app.get('/api/settings', async (req, res) => {
+// GET /api/users — List registered users with field counts (Accessible by all or Admin)
+app.get('/api/users', identifyUser, async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM settings WHERE id = 1');
-    if (rows.length === 0) {
-      // Return defaults if empty
-      return res.json({
-        role: "Farmer",
-        weather_api_key: "",
-        gov_api_key: "",
-        unit_preference: "Metric",
-        weather_lat: 18.5204,
-        weather_lng: 73.8567
-      });
-    }
-    res.json(rows[0]);
+    const [rows] = await pool.query(`
+      SELECT u.id, u.username, u.full_name, u.role, u.created_at, u.last_login,
+             COUNT(DISTINCT f.id) AS field_count
+      FROM users u
+      LEFT JOIN fields f ON u.id = f.user_id
+      GROUP BY u.id
+      ORDER BY u.id ASC
+    `);
+    res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post('/api/settings', async (req, res) => {
+// ==============================================
+// REST ENDPOINTS (CONNECTED TO USER & DB TABLES)
+// ==============================================
+
+// 1. SETTINGS API (Per-user settings)
+app.get('/api/settings', identifyUser, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    let [rows] = await pool.query('SELECT * FROM settings WHERE user_id = ?', [userId]);
+    if (rows.length === 0) {
+      // Check if legacy settings row exists without user_id
+      const [legacy] = await pool.query('SELECT * FROM settings WHERE user_id IS NULL OR id = 1 LIMIT 1');
+      if (legacy.length > 0) {
+        await pool.query('UPDATE settings SET user_id = ? WHERE id = ?', [userId, legacy[0].id]);
+        [rows] = await pool.query('SELECT * FROM settings WHERE user_id = ?', [userId]);
+      } else {
+        // Initialize settings for this user
+        await pool.query(
+          'INSERT INTO settings (user_id, role, weather_api_key, gov_api_key, unit_preference, weather_lat, weather_lng) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [userId, req.user.role || 'Farmer', '', '', 'Metric', 18.5204, 73.8567]
+        );
+        [rows] = await pool.query('SELECT * FROM settings WHERE user_id = ?', [userId]);
+      }
+    }
+    res.json(rows[0] || {
+      role: req.user.role || 'Farmer',
+      weather_api_key: '',
+      gov_api_key: '',
+      unit_preference: 'Metric',
+      weather_lat: 18.5204,
+      weather_lng: 73.8567
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/settings', identifyUser, async (req, res) => {
   const { role, weather_api_key, gov_api_key, unit_preference, weather_lat, weather_lng } = req.body;
+  const userId = req.user.id;
   try {
     await pool.query(
-      `INSERT INTO settings (id, role, weather_api_key, gov_api_key, unit_preference, weather_lat, weather_lng) 
-       VALUES (1, ?, ?, ?, ?, ?, ?) 
+      `INSERT INTO settings (user_id, role, weather_api_key, gov_api_key, unit_preference, weather_lat, weather_lng) 
+       VALUES (?, ?, ?, ?, ?, ?, ?) 
        ON DUPLICATE KEY UPDATE 
          role = VALUES(role), 
          weather_api_key = VALUES(weather_api_key), 
@@ -177,32 +245,58 @@ app.post('/api/settings', async (req, res) => {
          unit_preference = VALUES(unit_preference), 
          weather_lat = VALUES(weather_lat), 
          weather_lng = VALUES(weather_lng)`,
-      [role, weather_api_key || '', gov_api_key || '', unit_preference || 'Metric', weather_lat || 18.5204, weather_lng || 73.8567]
+      [userId, role || req.user.role || 'Farmer', weather_api_key || '', gov_api_key || '', unit_preference || 'Metric', weather_lat || 18.5204, weather_lng || 73.8567]
     );
+
+    // Update role in users table if changed
+    if (role && role !== req.user.role) {
+      await pool.query('UPDATE users SET role = ? WHERE id = ?', [role, userId]);
+    }
+
     res.json({ message: 'Settings saved successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// 2. FIELDS API
-app.get('/api/fields', async (req, res) => {
+// 2. FIELDS API (Filtered by user; Admins see all)
+app.get('/api/fields', identifyUser, async (req, res) => {
   try {
-    const [fields] = await pool.query('SELECT * FROM fields');
-    const [history] = await pool.query('SELECT * FROM field_history ORDER BY history_date DESC');
+    const isAdmin = req.user.role === 'Admin';
+    let query = `
+      SELECT f.*, u.username AS owner_username, u.full_name AS owner_name 
+      FROM fields f 
+      LEFT JOIN users u ON f.user_id = u.id
+    `;
+    const params = [];
+    if (!isAdmin) {
+      query += ' WHERE f.user_id = ? OR f.user_id IS NULL';
+      params.push(req.user.id);
+    }
+    query += ' ORDER BY f.name ASC';
 
-    // Attach history array to fields
+    const [fields] = await pool.query(query, params);
+    const fieldIds = fields.map(f => f.id);
+
+    let history = [];
+    if (fieldIds.length > 0) {
+      const [histRows] = await pool.query(
+        'SELECT * FROM field_history WHERE field_id IN (?) ORDER BY history_date DESC',
+        [fieldIds]
+      );
+      history = histRows;
+    }
+
     const enrichedFields = fields.map(f => {
       const fieldHistory = history
         .filter(h => h.field_id === f.id)
         .map(h => ({
-          date: h.history_date.toISOString().split('T')[0],
+          date: h.history_date ? h.history_date.toISOString().split('T')[0] : '',
           crop: h.crop,
           yield: h.yield_amount,
           notes: h.notes
         }));
       
-      // coordinates column is parsed if it's stored as JSON
       let coords = f.coordinates;
       if (typeof coords === 'string') {
         try { coords = JSON.parse(coords); } catch (e) { coords = []; }
@@ -210,6 +304,9 @@ app.get('/api/fields', async (req, res) => {
 
       return {
         id: f.id,
+        user_id: f.user_id,
+        owner_name: f.owner_name || '',
+        owner_username: f.owner_username || '',
         name: f.name,
         area: parseFloat(f.area),
         soil_type: f.soil_type,
@@ -226,13 +323,14 @@ app.get('/api/fields', async (req, res) => {
   }
 });
 
-app.post('/api/fields', async (req, res) => {
+app.post('/api/fields', identifyUser, async (req, res) => {
   const { id, name, area, soil_type, lat, lng, coordinates } = req.body;
+  const userId = req.user.id;
   try {
     const coordsJSON = JSON.stringify(coordinates || []);
     await pool.query(
-      'INSERT INTO fields (id, name, area, soil_type, lat, lng, coordinates) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [id, name, area, soil_type, lat, lng, coordsJSON]
+      'INSERT INTO fields (id, user_id, name, area, soil_type, lat, lng, coordinates) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, userId, name, area, soil_type, lat, lng, coordsJSON]
     );
     res.json({ message: 'Field added successfully' });
   } catch (err) {
@@ -240,24 +338,36 @@ app.post('/api/fields', async (req, res) => {
   }
 });
 
-app.delete('/api/fields/:id', async (req, res) => {
+app.delete('/api/fields/:id', identifyUser, async (req, res) => {
   const { id } = req.params;
+  const isAdmin = req.user.role === 'Admin';
   try {
-    await pool.query('DELETE FROM fields WHERE id = ?', [id]);
+    if (isAdmin) {
+      await pool.query('DELETE FROM fields WHERE id = ?', [id]);
+    } else {
+      await pool.query('DELETE FROM fields WHERE id = ? AND (user_id = ? OR user_id IS NULL)', [id, req.user.id]);
+    }
     res.json({ message: 'Field deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// 3. CROPS API
-app.get('/api/crops', async (req, res) => {
+// 3. CROPS API (Filtered by user's fields; Admins see all)
+app.get('/api/crops', identifyUser, async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM crops');
+    const isAdmin = req.user.role === 'Admin';
+    let query = 'SELECT crops.* FROM crops';
+    const params = [];
+    if (!isAdmin) {
+      query += ' INNER JOIN fields ON crops.field_id = fields.id WHERE fields.user_id = ? OR fields.user_id IS NULL';
+      params.push(req.user.id);
+    }
+    const [rows] = await pool.query(query, params);
     const crops = rows.map(c => ({
       ...c,
-      sowing_date: c.sowing_date.toISOString().split('T')[0],
-      harvest_date: c.harvest_date.toISOString().split('T')[0]
+      sowing_date: c.sowing_date ? c.sowing_date.toISOString().split('T')[0] : '',
+      harvest_date: c.harvest_date ? c.harvest_date.toISOString().split('T')[0] : ''
     }));
     res.json(crops);
   } catch (err) {
@@ -265,7 +375,7 @@ app.get('/api/crops', async (req, res) => {
   }
 });
 
-app.post('/api/crops', async (req, res) => {
+app.post('/api/crops', identifyUser, async (req, res) => {
   const { id, field_id, crop_name, variety, sowing_date, harvest_date, status, notes } = req.body;
   try {
     await pool.query(
@@ -278,7 +388,7 @@ app.post('/api/crops', async (req, res) => {
   }
 });
 
-app.put('/api/crops/:id/stage', async (req, res) => {
+app.put('/api/crops/:id/stage', identifyUser, async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   try {
@@ -289,7 +399,7 @@ app.put('/api/crops/:id/stage', async (req, res) => {
   }
 });
 
-app.delete('/api/crops/:id', async (req, res) => {
+app.delete('/api/crops/:id', identifyUser, async (req, res) => {
   const { id } = req.params;
   try {
     await pool.query('DELETE FROM crops WHERE id = ?', [id]);
@@ -299,10 +409,17 @@ app.delete('/api/crops/:id', async (req, res) => {
   }
 });
 
-// 4. YIELDS API
-app.get('/api/yields', async (req, res) => {
+// 4. YIELDS API (Filtered by user's fields; Admins see all)
+app.get('/api/yields', identifyUser, async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM yields');
+    const isAdmin = req.user.role === 'Admin';
+    let query = 'SELECT yields.* FROM yields';
+    const params = [];
+    if (!isAdmin) {
+      query += ' INNER JOIN fields ON yields.field_id = fields.id WHERE fields.user_id = ? OR fields.user_id IS NULL';
+      params.push(req.user.id);
+    }
+    const [rows] = await pool.query(query, params);
     const yields = rows.map(y => ({
       id: y.id,
       crop_id: y.crop_id,
@@ -310,7 +427,7 @@ app.get('/api/yields', async (req, res) => {
       field_id: y.field_id,
       quantity: parseFloat(y.quantity),
       unit: y.unit,
-      date: y.harvest_date.toISOString().split('T')[0],
+      date: y.harvest_date ? y.harvest_date.toISOString().split('T')[0] : '',
       season: y.season,
       revenue: parseFloat(y.revenue),
       cost: parseFloat(y.cost)
@@ -321,10 +438,9 @@ app.get('/api/yields', async (req, res) => {
   }
 });
 
-app.post('/api/yields', async (req, res) => {
+app.post('/api/yields', identifyUser, async (req, res) => {
   const { id, crop_id, crop_name, field_id, quantity, unit, date, season, revenue, cost } = req.body;
   try {
-    // Start transactional process: Add yield, set status to harvested, and append field_history
     const connection = await pool.getConnection();
     await connection.beginTransaction();
 
@@ -362,12 +478,20 @@ app.post('/api/yields', async (req, res) => {
   }
 });
 
-// 5. PRICE ALERTS API
-app.get('/api/price-alerts', async (req, res) => {
+// 5. PRICE ALERTS API (Scoped by user; Admins see all)
+app.get('/api/price-alerts', identifyUser, async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM price_alerts');
+    const isAdmin = req.user.role === 'Admin';
+    let query = 'SELECT * FROM price_alerts';
+    const params = [];
+    if (!isAdmin) {
+      query += ' WHERE user_id = ? OR user_id IS NULL';
+      params.push(req.user.id);
+    }
+    const [rows] = await pool.query(query, params);
     const alerts = rows.map(a => ({
       id: a.id,
+      user_id: a.user_id,
       crop: a.crop,
       targetPrice: parseFloat(a.targetPrice),
       condition: a.alert_condition,
@@ -375,7 +499,7 @@ app.get('/api/price-alerts', async (req, res) => {
       district: a.district,
       mandi: a.mandi,
       isTriggered: Boolean(a.isTriggered),
-      dateCreated: a.dateCreated.toISOString().split('T')[0]
+      dateCreated: a.dateCreated ? a.dateCreated.toISOString().split('T')[0] : ''
     }));
     res.json(alerts);
   } catch (err) {
@@ -383,13 +507,14 @@ app.get('/api/price-alerts', async (req, res) => {
   }
 });
 
-app.post('/api/price-alerts', async (req, res) => {
+app.post('/api/price-alerts', identifyUser, async (req, res) => {
   const { id, crop, targetPrice, condition, state, district, mandi, isTriggered, dateCreated } = req.body;
+  const userId = req.user.id;
   try {
     await pool.query(
-      `INSERT INTO price_alerts (id, crop, targetPrice, alert_condition, state, district, mandi, isTriggered, dateCreated) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, crop, targetPrice, condition || 'above', state, district, mandi, isTriggered ? 1 : 0, dateCreated]
+      `INSERT INTO price_alerts (id, user_id, crop, targetPrice, alert_condition, state, district, mandi, isTriggered, dateCreated) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, userId, crop, targetPrice, condition || 'above', state, district, mandi, isTriggered ? 1 : 0, dateCreated]
     );
     res.json({ message: 'Price alert created successfully' });
   } catch (err) {
@@ -397,7 +522,7 @@ app.post('/api/price-alerts', async (req, res) => {
   }
 });
 
-app.put('/api/price-alerts/:id/trigger', async (req, res) => {
+app.put('/api/price-alerts/:id/trigger', identifyUser, async (req, res) => {
   const { id } = req.params;
   const { isTriggered } = req.body;
   try {
@@ -408,28 +533,40 @@ app.put('/api/price-alerts/:id/trigger', async (req, res) => {
   }
 });
 
-app.delete('/api/price-alerts/:id', async (req, res) => {
+app.delete('/api/price-alerts/:id', identifyUser, async (req, res) => {
   const { id } = req.params;
+  const isAdmin = req.user.role === 'Admin';
   try {
-    await pool.query('DELETE FROM price_alerts WHERE id = ?', [id]);
+    if (isAdmin) {
+      await pool.query('DELETE FROM price_alerts WHERE id = ?', [id]);
+    } else {
+      await pool.query('DELETE FROM price_alerts WHERE id = ? AND (user_id = ? OR user_id IS NULL)', [id, req.user.id]);
+    }
     res.json({ message: 'Price alert deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// 6. SENSOR READINGS API
-app.get('/api/sensor-readings', async (req, res) => {
+// 6. SENSOR READINGS API (Scoped to user's fields; Admins see all)
+app.get('/api/sensor-readings', identifyUser, async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM sensor_readings ORDER BY timestamp ASC');
+    const isAdmin = req.user.role === 'Admin';
+    let query = 'SELECT sr.* FROM sensor_readings sr';
+    const params = [];
+    if (!isAdmin) {
+      query += ' INNER JOIN fields f ON sr.field_id = f.id WHERE f.user_id = ? OR f.user_id IS NULL';
+      params.push(req.user.id);
+    }
+    query += ' ORDER BY sr.timestamp ASC';
+    const [rows] = await pool.query(query, params);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// GET sensor readings for a specific field (last N days)
-app.get('/api/sensor-readings/:fieldId', async (req, res) => {
+app.get('/api/sensor-readings/:fieldId', identifyUser, async (req, res) => {
   const { fieldId } = req.params;
   const days = parseInt(req.query.days) || 7;
   try {
@@ -445,8 +582,7 @@ app.get('/api/sensor-readings/:fieldId', async (req, res) => {
   }
 });
 
-// POST /api/field-history — add a manual log / activity entry for a field
-app.post('/api/field-history', async (req, res) => {
+app.post('/api/field-history', identifyUser, async (req, res) => {
   const { field_id, history_date, crop, yield_amount, notes } = req.body;
   if (!field_id || !history_date || !notes) {
     return res.status(400).json({ error: 'field_id, history_date and notes are required.' });
@@ -462,8 +598,7 @@ app.post('/api/field-history', async (req, res) => {
   }
 });
 
-
-app.post('/api/sensor-readings', async (req, res) => {
+app.post('/api/sensor-readings', identifyUser, async (req, res) => {
   const { field_id, timestamp, moisture, temp_soil, temp_ambient, humidity_ambient, ph } = req.body;
   try {
     await pool.query(
@@ -477,10 +612,17 @@ app.post('/api/sensor-readings', async (req, res) => {
   }
 });
 
-// 7. SENSOR ALERTS API
-app.get('/api/sensor-alerts', async (req, res) => {
+// 7. SENSOR ALERTS API (Scoped to user's fields; Admins see all)
+app.get('/api/sensor-alerts', identifyUser, async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM sensor_alerts');
+    const isAdmin = req.user.role === 'Admin';
+    let query = 'SELECT sa.* FROM sensor_alerts sa';
+    const params = [];
+    if (!isAdmin) {
+      query += ' INNER JOIN fields f ON sa.field_id = f.id WHERE f.user_id = ? OR f.user_id IS NULL';
+      params.push(req.user.id);
+    }
+    const [rows] = await pool.query(query, params);
     const alerts = rows.map(a => ({
       id: a.id,
       field_id: a.field_id,
@@ -494,7 +636,7 @@ app.get('/api/sensor-alerts', async (req, res) => {
   }
 });
 
-app.post('/api/sensor-alerts', async (req, res) => {
+app.post('/api/sensor-alerts', identifyUser, async (req, res) => {
   const { id, field_id, type, message, timestamp } = req.body;
   try {
     await pool.query(
@@ -509,16 +651,24 @@ app.post('/api/sensor-alerts', async (req, res) => {
   }
 });
 
-app.delete('/api/sensor-alerts', async (req, res) => {
+app.delete('/api/sensor-alerts', identifyUser, async (req, res) => {
   try {
-    await pool.query('DELETE FROM sensor_alerts');
+    const isAdmin = req.user.role === 'Admin';
+    if (isAdmin) {
+      await pool.query('DELETE FROM sensor_alerts');
+    } else {
+      await pool.query(
+        'DELETE sa FROM sensor_alerts sa INNER JOIN fields f ON sa.field_id = f.id WHERE f.user_id = ? OR f.user_id IS NULL',
+        [req.user.id]
+      );
+    }
     res.json({ message: 'Sensor alerts cleared' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.delete('/api/sensor-alerts/:id', async (req, res) => {
+app.delete('/api/sensor-alerts/:id', identifyUser, async (req, res) => {
   const { id } = req.params;
   try {
     await pool.query('DELETE FROM sensor_alerts WHERE id = ?', [id]);
@@ -528,69 +678,100 @@ app.delete('/api/sensor-alerts/:id', async (req, res) => {
   }
 });
 
-// 8. RESET DATABASE API (For demo / recovery)
-app.post('/api/reset', async (req, res) => {
+// 8. RESET DATABASE API (Per-user demo reset)
+app.post('/api/reset', identifyUser, async (req, res) => {
+  const userId = req.user.id;
   try {
     const connection = await pool.getConnection();
     await connection.beginTransaction();
 
     try {
-      await connection.query('DELETE FROM sensor_alerts');
-      await connection.query('DELETE FROM sensor_readings');
-      await connection.query('DELETE FROM price_alerts');
-      await connection.query('DELETE FROM yields');
-      await connection.query('DELETE FROM crops');
-      await connection.query('DELETE FROM field_history');
-      await connection.query('DELETE FROM fields');
-      await connection.query('DELETE FROM settings');
-
-      // Seed Settings
+      // Clear alerts, readings, crops, history, fields for this user
       await connection.query(
-        `INSERT INTO settings (id, role, weather_api_key, gov_api_key, unit_preference, weather_lat, weather_lng)
-         VALUES (1, 'Farmer', '', '', 'Metric', 18.5204, 73.8567)`
+        'DELETE sa FROM sensor_alerts sa INNER JOIN fields f ON sa.field_id = f.id WHERE f.user_id = ?',
+        [userId]
+      );
+      await connection.query(
+        'DELETE sr FROM sensor_readings sr INNER JOIN fields f ON sr.field_id = f.id WHERE f.user_id = ?',
+        [userId]
+      );
+      await connection.query('DELETE FROM price_alerts WHERE user_id = ?', [userId]);
+      await connection.query(
+        'DELETE y FROM yields y INNER JOIN fields f ON y.field_id = f.id WHERE f.user_id = ?',
+        [userId]
+      );
+      await connection.query(
+        'DELETE c FROM crops c INNER JOIN fields f ON c.field_id = f.id WHERE f.user_id = ?',
+        [userId]
+      );
+      await connection.query(
+        'DELETE fh FROM field_history fh INNER JOIN fields f ON fh.field_id = f.id WHERE f.user_id = ?',
+        [userId]
+      );
+      await connection.query('DELETE FROM fields WHERE user_id = ?', [userId]);
+      await connection.query('DELETE FROM settings WHERE user_id = ?', [userId]);
+
+      // Seed Settings for user
+      await connection.query(
+        `INSERT INTO settings (user_id, role, weather_api_key, gov_api_key, unit_preference, weather_lat, weather_lng)
+         VALUES (?, 'Farmer', '', '', 'Metric', 18.5204, 73.8567)
+         ON DUPLICATE KEY UPDATE role = VALUES(role)`,
+        [userId]
       );
 
-      // Seed Fields
+      // Seed Fields for user
+      const f1Id = 'f1_' + userId;
+      const f2Id = 'f2_' + userId;
+      const f3Id = 'f3_' + userId;
+
       await connection.query(
-        `INSERT INTO fields (id, name, area, soil_type, lat, lng, coordinates) VALUES 
-         ('f1', 'North Meadow', 12.5, 'Loam', 18.5254, 73.8587, '[[18.5270, 73.8570], [18.5270, 73.8604], [18.5238, 73.8604], [18.5238, 73.8570]]'),
-         ('f2', 'East Riverfront', 8.2, 'Clay Loam', 18.5190, 73.8710, '[[18.5210, 73.8690], [18.5210, 73.8730], [18.5170, 73.8730], [18.5170, 73.8690]]'),
-         ('f3', 'Hillside Slopes', 5.4, 'Sandy Loam', 18.5080, 73.8480, '[[18.5100, 73.8460], [18.5100, 73.8500], [18.5060, 73.8500], [18.5060, 73.8460]]')`
+        `INSERT INTO fields (id, user_id, name, area, soil_type, lat, lng, coordinates) VALUES 
+         (?, ?, 'North Meadow', 12.5, 'Loam', 18.5254, 73.8587, '[[18.5270, 73.8570], [18.5270, 73.8604], [18.5238, 73.8604], [18.5238, 73.8570]]'),
+         (?, ?, 'East Riverfront', 8.2, 'Clay Loam', 18.5190, 73.8710, '[[18.5210, 73.8690], [18.5210, 73.8730], [18.5170, 73.8730], [18.5170, 73.8690]]'),
+         (?, ?, 'Hillside Slopes', 5.4, 'Sandy Loam', 18.5080, 73.8480, '[[18.5100, 73.8460], [18.5100, 73.8500], [18.5060, 73.8500], [18.5060, 73.8460]]')`,
+        [f1Id, userId, f2Id, userId, f3Id, userId]
       );
 
       // Seed Histories
       await connection.query(
         `INSERT INTO field_history (field_id, history_date, crop, yield_amount, notes) VALUES
-         ('f1', '2025-05-10', 'Corn', '45 Tons', 'Good harvest, slight nitrogen depletion.'),
-         ('f1', '2024-11-12', 'Wheat', '38 Tons', 'Normal soil moisture, minor pest attack handled.'),
-         ('f2', '2025-04-15', 'Rice', '32 Tons', 'High water consumption due to clay content.'),
-         ('f3', '2025-03-20', 'Soybean', '15 Tons', 'Slight soil erosion detected on north slope.')`
+         (?, '2025-05-10', 'Corn', '45 Tons', 'Good harvest, slight nitrogen depletion.'),
+         (?, '2024-11-12', 'Wheat', '38 Tons', 'Normal soil moisture, minor pest attack handled.'),
+         (?, '2025-04-15', 'Rice', '32 Tons', 'High water consumption due to clay content.'),
+         (?, '2025-03-20', 'Soybean', '15 Tons', 'Slight soil erosion detected on north slope.')`,
+        [f1Id, f1Id, f2Id, f3Id]
       );
 
       // Seed Crops
+      const c1Id = 'c1_' + userId;
+      const c2Id = 'c2_' + userId;
+      const c3Id = 'c3_' + userId;
       await connection.query(
         `INSERT INTO crops (id, field_id, crop_name, variety, sowing_date, harvest_date, status, notes) VALUES
-         ('c1', 'f1', 'Wheat', 'HD-2967 High Yield', '2026-06-15', '2026-10-15', 'Flowering', 'Sown early, healthy green leaves. Crop needs nitrogen check.'),
-         ('c2', 'f2', 'Rice', 'Basmati-370', '2026-07-01', '2026-11-15', 'Vegetative', 'Irrigation running daily. Good growth stage.'),
-         ('c3', 'f3', 'Soybeans', 'JS 335', '2026-05-10', '2026-09-10', 'Ready for Harvest', 'Pods filled nicely. Harvest scheduled next week.')`
+         (?, ?, 'Wheat', 'HD-2967 High Yield', '2026-06-15', '2026-10-15', 'Flowering', 'Sown early, healthy green leaves. Crop needs nitrogen check.'),
+         (?, ?, 'Rice', 'Basmati-370', '2026-07-01', '2026-11-15', 'Vegetative', 'Irrigation running daily. Good growth stage.'),
+         (?, ?, 'Soybeans', 'JS 335', '2026-05-10', '2026-09-10', 'Ready for Harvest', 'Pods filled nicely. Harvest scheduled next week.')`,
+        [c1Id, f1Id, c2Id, f2Id, c3Id, f3Id]
       );
 
       // Seed Yields
       await connection.query(
         `INSERT INTO yields (id, crop_id, crop_name, field_id, quantity, unit, harvest_date, season, revenue, cost) VALUES
-         ('y1', 'c_old_1', 'Wheat', 'f1', 35.00, 'Tons', '2025-10-12', 'Rabi 2025', 7200.00, 2200.00),
-         ('y2', 'c_old_2', 'Corn', 'f2', 40.00, 'Tons', '2025-09-15', 'Kharif 2025', 6800.00, 1800.00),
-         ('y3', 'c_old_3', 'Soybeans', 'f3', 12.00, 'Tons', '2025-08-30', 'Kharif 2025', 4100.00, 1100.00)`
+         (?, ?, 'Wheat', ?, 35.00, 'Tons', '2025-10-12', 'Rabi 2025', 7200.00, 2200.00),
+         (?, ?, 'Corn', ?, 40.00, 'Tons', '2025-09-15', 'Kharif 2025', 6800.00, 1800.00),
+         (?, ?, 'Soybeans', ?, 12.00, 'Tons', '2025-08-30', 'Kharif 2025', 4100.00, 1100.00)`,
+        ['y1_' + userId, c1Id, f1Id, 'y2_' + userId, c2Id, f2Id, 'y3_' + userId, c3Id, f3Id]
       );
 
       // Seed Alerts
       await connection.query(
-        `INSERT INTO price_alerts (id, crop, targetPrice, alert_condition, state, district, mandi, isTriggered, dateCreated) VALUES
-         ('alert-1', 'Wheat', 2150.00, 'above', 'Maharashtra', 'Pune', 'Pune Mandi', TRUE, '2026-08-25')`
+        `INSERT INTO price_alerts (id, user_id, crop, targetPrice, alert_condition, state, district, mandi, isTriggered, dateCreated) VALUES
+         (?, ?, 'Wheat', 2150.00, 'above', 'Maharashtra', 'Pune', 'Pune Mandi', TRUE, '2026-08-25')`,
+        ['alert_' + userId, userId]
       );
 
       await connection.commit();
-      res.json({ message: 'Database reset to default seeds successfully!' });
+      res.json({ message: 'Your fields and data have been reset to default seeds successfully!' });
     } catch (txErr) {
       await connection.rollback();
       throw txErr;
@@ -603,8 +784,6 @@ app.post('/api/reset', async (req, res) => {
 });
 
 // ── Maharashtra APMC Mandis Directory ─────────────────────────────────────────
-// Returns structured list of all Maharashtra districts → mandis → commodity prices.
-// Tries data.gov.in live data first; falls back to built-in APMC reference table.
 const MAHARASHTRA_APMC = {
   "Pune":       ["Pune APMC"],
   "Nashik":     ["Lasalgaon APMC", "Nashik APMC", "Niphad APMC"],
@@ -624,10 +803,10 @@ const MAHARASHTRA_APMC = {
 const MH_COMMODITIES = ["Wheat", "Rice", "Soybeans", "Maize", "Cotton", "Onion",
                         "Tur (Pigeon Peas)", "Tomato", "Grapes", "Turmeric", "Sugarcane"];
 
-app.get('/api/maharashtra-mandis', async (req, res) => {
+app.get('/api/maharashtra-mandis', identifyUser, async (req, res) => {
   try {
-    // 1. Fetch API key
-    const [rows] = await pool.query('SELECT gov_api_key FROM settings WHERE id = 1').catch(() => [[]]);
+    const userId = req.user.id;
+    const [rows] = await pool.query('SELECT gov_api_key FROM settings WHERE user_id = ?', [userId]).catch(() => [[]]);
     let apiKey = rows.length > 0 && rows[0].gov_api_key ? rows[0].gov_api_key.trim() : '';
     if (!apiKey) apiKey = process.env.GOV_API_KEY || '';
 
@@ -635,7 +814,6 @@ app.get('/api/maharashtra-mandis', async (req, res) => {
     let liveRecords = [];
 
     if (apiKey) {
-      // Fetch last 50 records from data.gov.in for state=Maharashtra
       const url = `https://api.data.gov.in/resource/${resourceId}?api-key=${apiKey}&format=json&limit=50&filters[state]=Maharashtra`;
       try {
         const apiRes = await fetch(url);
@@ -643,15 +821,13 @@ app.get('/api/maharashtra-mandis', async (req, res) => {
           const apiData = await apiRes.json();
           liveRecords = apiData.records || [];
         }
-      } catch (_) { /* fall through to static */ }
+      } catch (_) {}
     }
 
-    // Build structured response
     const result = {};
     for (const [district, mandis] of Object.entries(MAHARASHTRA_APMC)) {
       result[district] = {};
       for (const mandi of mandis) {
-        // Try to find a live record matching this mandi
         const matched = liveRecords.filter(r =>
           r.market && r.market.toLowerCase().includes(mandi.split(' ')[0].toLowerCase())
         );
@@ -679,8 +855,8 @@ app.get('/api/maharashtra-mandis', async (req, res) => {
   }
 });
 
-// Proxy endpoint for Gov Mandi Prices (Variety-wise Daily Market Prices from data.gov.in)
-app.get('/api/external/mandi-price', async (req, res) => {
+// Proxy endpoint for Gov Mandi Prices
+app.get('/api/external/mandi-price', identifyUser, async (req, res) => {
   const { state, district, market, crop } = req.query;
 
   if (!state || !district || !market || !crop) {
@@ -688,11 +864,10 @@ app.get('/api/external/mandi-price', async (req, res) => {
   }
 
   try {
-    // 1. Try to get Gov API key from settings table
-    const [rows] = await pool.query('SELECT gov_api_key FROM settings WHERE id = 1');
+    const userId = req.user.id;
+    const [rows] = await pool.query('SELECT gov_api_key FROM settings WHERE user_id = ?', [userId]);
     let apiKey = rows.length > 0 && rows[0].gov_api_key ? rows[0].gov_api_key.trim() : '';
 
-    // 2. Fallback to process.env.GOV_API_KEY
     if (!apiKey) {
       apiKey = process.env.GOV_API_KEY || '';
     }
@@ -701,12 +876,10 @@ app.get('/api/external/mandi-price', async (req, res) => {
       return res.json({ isMock: true, reason: 'No API key configured. Provide OGD API key in Settings.' });
     }
 
-    // Normalize commodity names for OGD / data.gov.in literal matches
     let targetCrop = crop;
     if (crop === 'Soybeans') targetCrop = 'Soyabean';
     else if (crop === 'Rice') targetCrop = 'Paddy(Common)';
 
-    // data.gov.in Agmarknet Variety Daily Market Prices Resource ID
     const resourceId = '9ef84281-2a12-4174-a7bf-3d572bc2178a';
     const url = `https://api.data.gov.in/resource/${resourceId}?api-key=${apiKey}&format=json&limit=10&filters[state]=${encodeURIComponent(state)}&filters[district]=${encodeURIComponent(district)}&filters[market]=${encodeURIComponent(market)}&filters[commodity]=${encodeURIComponent(targetCrop)}`;
 

@@ -1194,6 +1194,25 @@
     </div>
   </div>
 
+  <!-- GLOBAL AUTH API HELPER -->
+  <script>
+    window.apiFetch = async function(url, options) {
+      options = options || {};
+      options.headers = options.headers || {};
+      const token = localStorage.getItem('auth_token') || '';
+      if (token) {
+        options.headers['Authorization'] = 'Bearer ' + token;
+      }
+      const res = await fetch(url, options);
+      if (res.status === 401) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+        window.location.href = '/login';
+      }
+      return res;
+    };
+  </script>
+
   <!-- SCRIPTS LOADINGS -->
   <script src="i18n.js?v=1"></script>
   <script src="mockData.js"></script>

@@ -33,7 +33,7 @@ class SensorManager {
   async fetchData() {
     try {
       // 1. Fetch readings
-      const resReadings = await fetch('/api/sensor-readings');
+      const resReadings = await (window.apiFetch || fetch)('/api/sensor-readings');
       const readings = await resReadings.json();
       
       const grouped = {};
@@ -51,7 +51,7 @@ class SensorManager {
       this.cachedReadings = grouped;
 
       // 2. Fetch alerts
-      const resAlerts = await fetch('/api/sensor-alerts');
+      const resAlerts = await (window.apiFetch || fetch)('/api/sensor-alerts');
       const alerts = await resAlerts.json();
       this.cachedAlerts = alerts.map(a => ({
         id: a.id,
@@ -74,13 +74,13 @@ class SensorManager {
     if (Object.keys(this.cachedReadings).length === 0) {
       console.log("MySQL sensor_readings table is empty. Generating 24h mock seed history...");
       try {
-        const fieldsRes = await fetch('/api/fields');
+        const fieldsRes = await (window.apiFetch || fetch)('/api/fields');
         const fields = await fieldsRes.json();
         
         for (const field of fields) {
           const history = this.generate24hHistory(field.id);
           for (const item of history) {
-            await fetch('/api/sensor-readings', {
+            await (window.apiFetch || fetch)('/api/sensor-readings', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -154,7 +154,7 @@ class SensorManager {
   // Fluctuate and append new values to simulate live IoT sensors reporting
   async runTelemetrySimulation() {
     try {
-      const fieldsRes = await fetch('/api/fields');
+      const fieldsRes = await (window.apiFetch || fetch)('/api/fields');
       const fields = await fieldsRes.json();
       const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
 
@@ -172,7 +172,7 @@ class SensorManager {
         const ph = Math.max(4.0, Math.min(9.0, last.ph + (Math.random() - 0.5) * 0.02));
 
         // Post new reading to MySQL database
-        await fetch('/api/sensor-readings', {
+        await (window.apiFetch || fetch)('/api/sensor-readings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -198,14 +198,14 @@ class SensorManager {
   // Checks current sensor statuses against crop thresholds
   async evaluateThresholdAlerts() {
     try {
-      const fieldsRes = await fetch('/api/fields');
+      const fieldsRes = await (window.apiFetch || fetch)('/api/fields');
       const fields = await fieldsRes.json();
-      const cropsRes = await fetch('/api/crops');
+      const cropsRes = await (window.apiFetch || fetch)('/api/crops');
       const crops = await cropsRes.json();
       const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
 
       // Clear existing sensor alerts in DB
-      await fetch('/api/sensor-alerts', { method: 'DELETE' });
+      await (window.apiFetch || fetch)('/api/sensor-alerts', { method: 'DELETE' });
 
       for (const field of fields) {
         // Find growing crop
@@ -284,7 +284,7 @@ class SensorManager {
   // Helper to post active alert
   async saveAlert(alert) {
     try {
-      await fetch('/api/sensor-alerts', {
+      await (window.apiFetch || fetch)('/api/sensor-alerts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(alert)

@@ -280,7 +280,7 @@ class MarketPriceManager {
 
   async getAlerts() {
     try {
-      const res = await fetch('/api/price-alerts');
+      const res = await (window.apiFetch || fetch)('/api/price-alerts');
       return await res.json();
     } catch (e) {
       console.error("Error fetching price alerts:", e);
@@ -302,7 +302,7 @@ class MarketPriceManager {
     };
 
     try {
-      await fetch('/api/price-alerts', {
+      await (window.apiFetch || fetch)('/api/price-alerts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newAlert)
@@ -316,7 +316,7 @@ class MarketPriceManager {
 
   async deleteAlert(alertId) {
     try {
-      await fetch(`/api/price-alerts/${alertId}`, { method: 'DELETE' });
+      await (window.apiFetch || fetch)(`/api/price-alerts/${alertId}`, { method: 'DELETE' });
     } catch (e) {
       console.error("Error deleting price alert:", e);
     }
@@ -342,7 +342,7 @@ class MarketPriceManager {
         alert.isTriggered = triggered;
         // Update trigger state in DB
         try {
-          await fetch(`/api/price-alerts/${alert.id}/trigger`, {
+          await (window.apiFetch || fetch)(`/api/price-alerts/${alert.id}/trigger`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ isTriggered: triggered })

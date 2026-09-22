@@ -32,10 +32,14 @@ class App {
 
   // ── Inject auth token into all API calls ──────────
   async apiFetch(url, options) {
+    if (window.apiFetch) return window.apiFetch(url, options);
     options = options || {};
     options.headers = options.headers || {};
-    options.headers['Authorization'] = 'Bearer ' + this.getAuthToken();
-    return fetch(url, options);
+    const token = this.getAuthToken();
+    if (token) options.headers['Authorization'] = 'Bearer ' + token;
+    const res = await fetch(url, options);
+    if (res.status === 401) this.logout();
+    return res;
   }
 
   async init() {
@@ -87,7 +91,7 @@ class App {
   // Helper getters to communicate with MySQL backend REST APIs
   async getFields() {
     try {
-      const res = await fetch('/api/fields');
+      const res = await this.apiFetch('/api/fields');
       return await res.json();
     } catch (e) {
       console.error("Error fetching fields:", e);
@@ -97,7 +101,7 @@ class App {
 
   async getCrops() {
     try {
-      const res = await fetch('/api/crops');
+      const res = await this.apiFetch('/api/crops');
       return await res.json();
     } catch (e) {
       console.error("Error fetching crops:", e);
@@ -107,7 +111,7 @@ class App {
 
   async getYields() {
     try {
-      const res = await fetch('/api/yields');
+      const res = await this.apiFetch('/api/yields');
       return await res.json();
     } catch (e) {
       console.error("Error fetching yields:", e);
@@ -117,7 +121,7 @@ class App {
 
   async getPriceAlerts() {
     try {
-      const res = await fetch('/api/price-alerts');
+      const res = await this.apiFetch('/api/price-alerts');
       return await res.json();
     } catch (e) {
       console.error("Error fetching price alerts:", e);
@@ -128,7 +132,7 @@ class App {
   // Load configuration from database
   async loadSettings() {
     try {
-      const res = await fetch('/api/settings');
+      const res = await this.apiFetch('/api/settings');
       this.settings = await res.json();
     } catch (e) {
       console.warn("Failed fetching settings from backend, using defaults", e);
@@ -710,7 +714,7 @@ class App {
     };
 
     try {
-      await fetch('/api/fields', {
+      await this.apiFetch('/api/fields', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newField)
@@ -732,7 +736,7 @@ class App {
     if (!confirm("Are you sure you want to delete this field? All crop records will remain but no longer link to this field.")) return;
 
     try {
-      await fetch(`/api/fields/${fieldId}`, { method: 'DELETE' });
+      await this.apiFetch(`/api/fields/${fieldId}`, { method: 'DELETE' });
     } catch (e) {
       console.error("Error deleting field:", e);
     }
@@ -846,7 +850,7 @@ class App {
     };
 
     try {
-      await fetch('/api/crops', {
+      await this.apiFetch('/api/crops', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newCrop)
@@ -874,7 +878,7 @@ class App {
     const newStage = document.getElementById("update-stage-select").value;
     
     try {
-      await fetch(`/api/crops/${this.activeCropId}/stage`, {
+      await this.apiFetch(`/api/crops/${this.activeCropId}/stage`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStage })
@@ -930,7 +934,7 @@ class App {
     };
 
     try {
-      await fetch('/api/yields', {
+      await this.apiFetch('/api/yields', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newYield)
@@ -952,7 +956,7 @@ class App {
     if (!confirm("Are you sure you want to delete this crop assignment?")) return;
 
     try {
-      await fetch(`/api/crops/${cropId}`, { method: 'DELETE' });
+      await this.apiFetch(`/api/crops/${cropId}`, { method: 'DELETE' });
     } catch (e) {
       console.error("Error deleting crop:", e);
     }
@@ -976,7 +980,7 @@ class App {
     };
 
     try {
-      await fetch('/api/settings', {
+      await this.apiFetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings)
@@ -1000,7 +1004,7 @@ class App {
     if (!confirm("WARNING: This will wipe all custom fields, crops, activities and yields, restoring default mock database values. Continue?")) return;
 
     try {
-      await fetch('/api/reset', { method: 'POST' });
+      await this.apiFetch('/api/reset', { method: 'POST' });
       await this.loadSettings();
       await this.init(); // Restart everything
       alert("Database restored to defaults!");
