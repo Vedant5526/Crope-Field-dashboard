@@ -134,7 +134,33 @@ const autoDict = {
         "Basmati": "बासमती",
         "BT Cotton": "बीटी कपास",
         "Initial sowing": "प्रारंभिक बुवाई",
-        "Yield": "पैदावार"
+        "Yield": "पैदावार",
+        "Area Size": "क्षेत्र का आकार",
+        "Acres": "एकड़",
+        "Current Status": "वर्तमान स्थिति",
+        "Assign Crop": "फसल असाइन करें",
+        "History & Logs": "इतिहास और लॉग",
+        "Stage": "चरण",
+        "Harvest": "कटाई",
+        "Recorded": "दर्ज",
+        "Soil Moisture": "मिट्टी की नमी",
+        "Soil Temp": "मिट्टी का तापमान",
+        "Ambient Temp": "परिवेश तापमान",
+        "Ambient Humid": "परिवेश आर्द्रता",
+        "Soil pH Level": "मिट्टी का pH स्तर",
+        "Inspect Operations & Telemetry": "संचालन और टेलीमेट्री जांचें",
+        "No fields registered yet.": "अभी तक कोई खेत पंजीकृत नहीं है।",
+        "Add Your First Field": "अपना पहला खेत जोड़ें",
+        "No crops assigned to fields yet.": "अभी तक किसी खेत में फसल नहीं लगाई गई।",
+        "No crops currently assigned to this field.": "इस खेत में अभी कोई फसल नहीं है।",
+        "No past history or logs recorded for this field.": "इस खेत के लिए कोई पिछला इतिहास या लॉग दर्ज नहीं है।",
+        "No sensor data recorded in this period.": "इस अवधि में कोई सेंसर डेटा दर्ज नहीं हुआ।",
+        "No price alerts scheduled yet.": "अभी तक कोई मूल्य अलर्ट निर्धारित नहीं है।",
+        "No fields mapped yet. Go to Fields view to register lands.": "अभी कोई खेत नहीं जोड़ा गया। खेत जोड़ने के लिए Fields दृश्य पर जाएं।",
+        "All systems operational. No active tasks.": "सभी सिस्टम सक्रिय हैं। कोई सक्रिय कार्य नहीं।",
+        "Optimal Status": "सर्वोत्तम स्थिति",
+        "Action Needed": "कार्रवाई आवश्यक",
+        "Out of Range": "सीमा से बाहर"
     },
     "mr": {
         "Overview": "विहंगावलोकन",
@@ -270,7 +296,33 @@ const autoDict = {
         "Basmati": "बासमती",
         "BT Cotton": "बीटी कापूस",
         "Initial sowing": "प्राथमिक पेरणी",
-        "Yield": "उत्पन्न"
+        "Yield": "उत्पन्न",
+        "Area Size": "क्षेत्राचा आकार",
+        "Acres": "एकर",
+        "Current Status": "सध्याची स्थिती",
+        "Assign Crop": "पीक नियुक्त करा",
+        "History & Logs": "इतिहास आणि नोंदी",
+        "Stage": "टप्पा",
+        "Harvest": "काढणी",
+        "Recorded": "नोंदवले",
+        "Soil Moisture": "मातीतील ओलावा",
+        "Soil Temp": "मातीचे तापमान",
+        "Ambient Temp": "वातावरण तापमान",
+        "Ambient Humid": "वातावरण आर्द्रता",
+        "Soil pH Level": "मातीचा pH पातळी",
+        "Inspect Operations & Telemetry": "ऑपरेशन्स आणि टेलीमेट्री तपासा",
+        "No fields registered yet.": "अद्याप कोणतेही शेत नोंदवलेले नाही.",
+        "Add Your First Field": "आपले पहिले शेत जोडा",
+        "No crops assigned to fields yet.": "अद्याप कोणत्याही शेतात पीक नाही.",
+        "No crops currently assigned to this field.": "या शेतात सध्या कोणतेही पीक नाही.",
+        "No past history or logs recorded for this field.": "या शेतासाठी कोणताही मागील इतिहास किंवा नोंदी नाहीत.",
+        "No sensor data recorded in this period.": "या कालावधीत सेंसर डेटा नाही.",
+        "No price alerts scheduled yet.": "अद्याप कोणताही किंमत अलर्ट नाही.",
+        "No fields mapped yet. Go to Fields view to register lands.": "अद्याप शेत नाही. शेत जोडण्यासाठी Fields दृश्यावर जा.",
+        "All systems operational. No active tasks.": "सर्व सिस्टम सक्रिय. कोणतेही सक्रिय कार्य नाही.",
+        "Optimal Status": "सर्वोत्तम स्थिती",
+        "Action Needed": "कारवाई आवश्यक",
+        "Out of Range": "मर्यादेबाहेर"
     }
 };
 
@@ -284,13 +336,30 @@ window.t = function(key) {
 window.setLanguage = function(lang) {
   currentLang = lang;
   localStorage.setItem('app_lang', lang);
-  
+
+  // Sync both language selectors (header + settings page)
+  document.querySelectorAll('.lang-selector-sync').forEach(el => { el.value = lang; });
+  const headerSel = document.getElementById('lang-selector');
+  if (headerSel) headerSel.value = lang;
+  const settingsSel = document.getElementById('settings-lang-selector');
+  if (settingsSel) settingsSel.value = lang;
+
   translateNodeText(document.body);
 
   if (window.app) {
-    if (typeof window.app.renderOverviewStats === 'function') window.app.renderOverviewStats();
-    if (typeof window.app.renderFieldsList === 'function') window.app.renderFieldsList();
-    if (typeof window.app.renderCropsList === 'function') window.app.renderCropsList();
+    const app = window.app;
+    // Re-render all views that inject dynamic HTML
+    if (typeof app.renderOverviewStats === 'function') app.renderOverviewStats();
+    if (typeof app.renderFieldsList === 'function') app.renderFieldsList();
+    if (typeof app.renderCropsList === 'function') app.renderCropsList();
+    if (typeof app.renderPriceAlerts === 'function') app.renderPriceAlerts();
+    if (typeof app.renderUpcomingActivities === 'function') app.renderUpcomingActivities();
+    // Re-render whichever view is currently active
+    const currentView = app.currentView;
+    if (currentView === 'sensors' && typeof app.renderSensorFields === 'function') app.renderSensorFields();
+    if (currentView === 'market' && typeof app.initMarketPage === 'function') app.initMarketPage();
+    if (currentView === 'overview' && typeof app.updateWeatherForFirstField === 'function') app.updateWeatherForFirstField();
+    if (currentView === 'reports' && window.chartManager && typeof window.chartManager.renderAllCharts === 'function') window.chartManager.renderAllCharts();
   }
 }
 
@@ -372,6 +441,8 @@ const observer = new MutationObserver(mutations => {
 document.addEventListener('DOMContentLoaded', () => {
   const selector = document.getElementById('lang-selector');
   if (selector) selector.value = currentLang;
+  const settingsSelector = document.getElementById('settings-lang-selector');
+  if (settingsSelector) settingsSelector.value = currentLang;
   
   translateNodeText(document.body);
   observer.observe(document.body, { childList: true, subtree: true });

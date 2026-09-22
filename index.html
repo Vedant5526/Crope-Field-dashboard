@@ -312,7 +312,7 @@
           <span id="user-greeting" class="text-xs font-semibold text-emerald-800">Loading...</span>
         </div>
         <!-- Notification Icon -->
-        <button class="relative w-9 h-9 border border-slate-200 hover:bg-slate-50 transition rounded-xl flex items-center justify-center text-slate-600">
+        <button onclick="app.showNotifications()" class="relative w-9 h-9 border border-slate-200 hover:bg-slate-50 transition rounded-xl flex items-center justify-center text-slate-600" title="Notifications & Alerts">
           <i class="fas fa-bell"></i>
           <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
         </button>
@@ -782,9 +782,18 @@
                     <option value="Imperial">Imperial (Acres, °F, Tons)</option>
                   </select>
                 </div>
+
+                <!-- Language Preference -->
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Interface Language</label>
+                  <select id="settings-lang-selector" onchange="window.setLanguage(this.value)" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                    <option value="en">English</option>
+                    <option value="hi">हिंदी (Hindi)</option>
+                    <option value="mr">मराठी (Marathi)</option>
+                  </select>
+                  <p class="text-[10px] text-slate-400 mt-1">Changes interface language across all views. Saved automatically.</p>
+                </div>
               </div>
-
-
 
               <div class="pt-4 border-t border-slate-100 flex justify-end">
                 <button type="submit" class="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition">
@@ -932,6 +941,7 @@
         </div>
       </form>
     </div>
+  </div>
 
   <!-- ============================================== -->
   <!-- MODAL: UPDATE GROWTH STAGE -->

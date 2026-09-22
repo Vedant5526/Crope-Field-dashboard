@@ -159,20 +159,24 @@ class App {
         e.preventDefault();
         const targetView = item.getAttribute("data-target-view");
         this.switchView(targetView);
-        
-        // Update active class in sidebar
-        navItems.forEach(nav => {
-          nav.classList.remove("bg-emerald-600", "text-white");
-          nav.classList.add("text-slate-300", "hover:bg-slate-700");
-        });
-        item.classList.remove("text-slate-300", "hover:bg-slate-700");
-        item.classList.add("bg-emerald-600", "text-white");
       });
     });
   }
 
   switchView(viewName) {
     this.currentView = viewName;
+
+    // Update active class in sidebar
+    const navItems = document.querySelectorAll("[data-target-view]");
+    navItems.forEach(nav => {
+      if (nav.getAttribute("data-target-view") === viewName) {
+        nav.classList.remove("text-slate-300", "hover:bg-slate-800", "hover:bg-slate-700");
+        nav.classList.add("bg-emerald-600", "text-white");
+      } else {
+        nav.classList.remove("bg-emerald-600", "text-white");
+        nav.classList.add("text-slate-300", "hover:bg-slate-800");
+      }
+    });
     
     // Toggle active state for content containers
     const sections = document.querySelectorAll(".view-section");
@@ -376,7 +380,7 @@ class App {
     });
 
     if (tasks.length === 0) {
-      container.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">All systems operational. No active tasks.</p>`;
+      container.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">${window.t('All systems operational. No active tasks.')}</p>`;
       return;
     }
 
@@ -413,8 +417,8 @@ class App {
       container.innerHTML = `
         <div class="col-span-full text-center py-12 border-2 border-dashed border-slate-200 rounded-2xl">
           <i class="fas fa-map-marked-alt text-4xl text-slate-300 mb-3"></i>
-          <p class="text-slate-500">No fields registered yet.</p>
-          <button onclick="app.showAddFieldModal()" class="mt-3 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-bold shadow-sm role-admin-farmer">Add Your First Field</button>
+          <p class="text-slate-500">${window.t('No fields registered yet.')}</p>
+          <button onclick="app.showAddFieldModal()" class="mt-3 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-bold shadow-sm role-admin-farmer">${window.t('Add Your First Field')}</button>
         </div>
       `;
       return;
@@ -423,8 +427,8 @@ class App {
     container.innerHTML = fields.map(field => {
       const activeCrop = crops.find(c => c.field_id === field.id && c.status !== "Harvested");
       const cropBadge = activeCrop 
-        ? `<span class="px-2 py-0.5 rounded text-xs font-semibold text-emerald-700 bg-emerald-100">${activeCrop.crop_name} (${activeCrop.status})</span>`
-        : `<span class="px-2 py-0.5 rounded text-xs font-semibold text-slate-500 bg-slate-100">Fallow</span>`;
+        ? `<span class="px-2 py-0.5 rounded text-xs font-semibold text-emerald-700 bg-emerald-100">${window.t(activeCrop.crop_name)} (${window.t(activeCrop.status)})</span>`
+        : `<span class="px-2 py-0.5 rounded text-xs font-semibold text-slate-500 bg-slate-100">${window.t('Fallow')}</span>`;
 
       return `
         <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between">
@@ -443,27 +447,27 @@ class App {
             
             <div class="mt-4 grid grid-cols-2 gap-3 text-xs border-t border-b border-slate-100 py-3 my-4">
               <div>
-                <span class="text-slate-400 block mb-0.5">Area Size</span>
-                <span class="font-bold text-slate-700 text-sm">${field.area} Acres</span>
+                <span class="text-slate-400 block mb-0.5">${window.t('Area Size')}</span>
+                <span class="font-bold text-slate-700 text-sm">${field.area} ${window.t('Acres')}</span>
               </div>
               <div>
-                <span class="text-slate-400 block mb-0.5">Soil Type</span>
+                <span class="text-slate-400 block mb-0.5">${window.t('Soil Type')}</span>
                 <span class="font-bold text-slate-700 text-sm">${field.soil_type}</span>
               </div>
             </div>
             
             <div class="flex items-center justify-between mb-4">
-              <span class="text-xs text-slate-400">Current Status</span>
+              <span class="text-xs text-slate-400">${window.t('Current Status')}</span>
               ${cropBadge}
             </div>
           </div>
           
           <div class="grid grid-cols-2 gap-2 pt-2">
             <button onclick="app.showFieldDetail('${field.id}')" class="px-3 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition">
-              History & Logs
+              ${window.t('History & Logs')}
             </button>
             <button onclick="app.showAddCropModal('${field.id}')" class="px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm transition role-admin-farmer">
-              Assign Crop
+              ${window.t('Assign Crop')}
             </button>
           </div>
         </div>
@@ -518,7 +522,7 @@ class App {
     // 1. Show Active Crops
     if (historyContainer) {
       if (fieldCrops.length === 0) {
-        historyContainer.innerHTML = `<li class="text-xs text-slate-400 italic py-2">No crops currently assigned to this field.</li>`;
+        historyContainer.innerHTML = `<li class="text-xs text-slate-400 italic py-2">${window.t('No crops currently assigned to this field.')}</li>`;
       } else {
         historyContainer.innerHTML = fieldCrops.map(crop => {
           let statusColor = "text-blue-600 bg-blue-50";
@@ -540,7 +544,7 @@ class App {
     // 2. Show Past History / Logs
     if (logsContainer) {
       if (!field.history || field.history.length === 0) {
-        logsContainer.innerHTML = `<li class="text-xs text-slate-400 italic py-2">No past history or logs recorded for this field.</li>`;
+        logsContainer.innerHTML = `<li class="text-xs text-slate-400 italic py-2">${window.t('No past history or logs recorded for this field.')}</li>`;
       } else {
         logsContainer.innerHTML = field.history.map(h => `
           <li class="p-2 rounded-lg bg-slate-50 border border-slate-100 mb-1.5">
@@ -602,7 +606,7 @@ class App {
     const tbody = document.getElementById("sensor-log-body");
     const countEl = document.getElementById("sensor-log-count");
     
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-slate-400 italic">Loading...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-slate-400 italic">${window.t('Loading...')}</td></tr>`;
     countEl.textContent = '';
 
     try {
@@ -610,7 +614,7 @@ class App {
       const readings = await res.json();
       
       if (!readings || readings.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-slate-400 italic">No sensor data recorded in this period.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-slate-400 italic">${window.t('No sensor data recorded in this period.')}</td></tr>`;
         return;
       }
       
@@ -749,7 +753,7 @@ class App {
     if (crops.length === 0) {
       container.innerHTML = `
         <tr>
-          <td colspan="6" class="text-center py-8 text-slate-400 text-sm">No crops assigned to fields yet.</td>
+          <td colspan="6" class="text-center py-8 text-slate-400 text-sm">${window.t('No crops assigned to fields yet.')}</td>
         </tr>
       `;
       return;
@@ -782,13 +786,13 @@ class App {
             <div class="flex justify-end space-x-1.5">
               ${crop.status !== "Harvested" ? `
                 <button onclick="app.showUpdateStageModal('${crop.id}', '${crop.status}')" class="px-2.5 py-1 text-xs bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 rounded font-bold transition" title="Update Stage">
-                  Stage
+                  ${window.t('Stage')}
                 </button>
                 <button onclick="app.showHarvestModal('${crop.id}')" class="px-2.5 py-1 text-xs bg-emerald-500 hover:bg-emerald-600 text-white rounded font-bold shadow-sm transition role-admin-farmer" title="Record Harvest">
-                  Harvest
+                  ${window.t('Harvest')}
                 </button>
               ` : `
-                <span class="text-xs text-emerald-600 font-bold italic"><i class="fas fa-check"></i> Recorded</span>
+                <span class="text-xs text-emerald-600 font-bold italic"><i class="fas fa-check"></i> ${window.t('Recorded')}</span>
               `}
               <button onclick="app.deleteCrop('${crop.id}')" class="text-red-400 hover:text-red-600 transition p-1 role-admin-farmer">
                 <i class="fas fa-trash-alt"></i>
@@ -1023,6 +1027,22 @@ class App {
     }
   }
 
+  showAddFieldModal() {
+    this.openModal("add-field-modal");
+  }
+
+  showNotifications() {
+    this.switchView('overview');
+    const banner = document.getElementById('price-alerts-banner');
+    if (banner && !banner.classList.contains('hidden')) {
+      banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      banner.classList.add('ring-4', 'ring-emerald-400');
+      setTimeout(() => banner.classList.remove('ring-4', 'ring-emerald-400'), 2500);
+    } else {
+      alert("All parameters are within normal thresholds. No active alerts.");
+    }
+  }
+
   // ---- MARKET PRICE CHECKER VIEW METHODS ----
 
   initMarketPage() {
@@ -1084,7 +1104,7 @@ class App {
     if (!minText || !modalText || !maxText) return;
 
     // Show loading
-    modalText.textContent = "Loading...";
+    modalText.textContent = window.t("Loading...");
 
     const priceInfo = await window.marketPriceManager.getMarketPrice(state, district, mandi, crop);
     
@@ -1114,7 +1134,7 @@ class App {
       if (alerts.length === 0) {
         tableBody.innerHTML = `
           <tr>
-            <td colspan="5" class="text-center py-4 text-slate-400">No price alerts scheduled yet.</td>
+            <td colspan="5" class="text-center py-4 text-slate-400">${window.t('No price alerts scheduled yet.')}</td>
           </tr>
         `;
       } else {
@@ -1261,7 +1281,7 @@ class App {
     const crops = await this.getCrops();
 
     if (fields.length === 0) {
-      grid.innerHTML = `<div class="col-span-full text-center py-6 text-slate-400">No fields mapped yet. Go to Fields view to register lands.</div>`;
+      grid.innerHTML = `<div class="col-span-full text-center py-6 text-slate-400">${window.t('No fields mapped yet. Go to Fields view to register lands.')}</div>`;
       return;
     }
 
@@ -1274,13 +1294,13 @@ class App {
       const status = window.sensorManager.getFieldSensorStatus(field.id);
       
       let dotColor = "sensor-dot-optimal";
-      let statusLabel = "Optimal Status";
+      let statusLabel = window.t("Optimal Status");
       if (status === "Critical") {
         dotColor = "sensor-dot-critical";
-        statusLabel = "Action Needed";
+        statusLabel = window.t("Action Needed");
       } else if (status === "Warning") {
         dotColor = "sensor-dot-warning";
-        statusLabel = "Out of Range";
+        statusLabel = window.t("Out of Range");
       }
 
       // Trend indicators
@@ -1309,7 +1329,7 @@ class App {
             <div class="grid grid-cols-2 gap-3">
               <!-- Moisture -->
               <div class="p-2.5 bg-sky-50/50 border border-sky-100/50 rounded-xl">
-                <span class="text-[9px] text-sky-600 font-bold uppercase tracking-wider block">Soil Moisture</span>
+                <span class="text-[9px] text-sky-600 font-bold uppercase tracking-wider block">${window.t('Soil Moisture')}</span>
                 <div class="flex justify-between items-baseline mt-1">
                   <span class="text-base font-black text-sky-800 font-mono-val">${latest.moisture}%</span>
                   <span class="text-xs font-black text-sky-500">${mTrend}</span>
@@ -1318,7 +1338,7 @@ class App {
               
               <!-- Soil Temp -->
               <div class="p-2.5 bg-amber-50/50 border border-amber-100/50 rounded-xl">
-                <span class="text-[9px] text-amber-600 font-bold uppercase tracking-wider block">Soil Temp</span>
+                <span class="text-[9px] text-amber-600 font-bold uppercase tracking-wider block">${window.t('Soil Temp')}</span>
                 <div class="flex justify-between items-baseline mt-1">
                   <span class="text-base font-black text-amber-800 font-mono-val">${latest.soilTemp}°C</span>
                   <span class="text-xs font-black text-amber-500">${stTrend}</span>
@@ -1327,7 +1347,7 @@ class App {
 
               <!-- Ambient Temp -->
               <div class="p-2.5 bg-slate-50 border border-slate-100 rounded-xl">
-                <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Ambient Temp</span>
+                <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">${window.t('Ambient Temp')}</span>
                 <div class="flex justify-between items-baseline mt-1">
                   <span class="text-base font-black text-slate-700 font-mono-val">${latest.ambientTemp}°C</span>
                   <span class="text-xs font-black text-slate-400">${atTrend}</span>
@@ -1336,7 +1356,7 @@ class App {
 
               <!-- Ambient Humidity -->
               <div class="p-2.5 bg-slate-50 border border-slate-100 rounded-xl">
-                <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Ambient Humid</span>
+                <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">${window.t('Ambient Humid')}</span>
                 <div class="flex justify-between items-baseline mt-1">
                   <span class="text-base font-black text-slate-700 font-mono-val">${latest.humidity}%</span>
                   <span class="text-xs font-black text-slate-400">${hTrend}</span>
@@ -1346,7 +1366,7 @@ class App {
 
             <!-- Soil pH -->
             <div class="mt-3 p-2 bg-purple-50/30 border border-purple-100/50 rounded-xl flex justify-between items-center px-3">
-              <span class="text-[9px] text-purple-600 font-bold uppercase tracking-wider">Soil pH Level</span>
+              <span class="text-[9px] text-purple-600 font-bold uppercase tracking-wider">${window.t('Soil pH Level')}</span>
               <div class="flex items-center space-x-2">
                 <span class="text-xs font-black text-purple-800 font-mono-val">pH ${latest.ph}</span>
                 <span class="text-xs font-black text-purple-400">${pTrend}</span>
@@ -1355,7 +1375,7 @@ class App {
           </div>
 
           <button onclick="app.showFieldDetail('${field.id}')" class="w-full py-1.5 border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold rounded-xl text-[10px] uppercase tracking-wider transition mt-3">
-            Inspect Operations & Telemetry
+            ${window.t('Inspect Operations & Telemetry')}
           </button>
         </div>
       `;
@@ -1418,21 +1438,21 @@ class App {
 
     container.innerHTML = `
       <div class="flex justify-between items-center">
-        <span class="text-slate-400 font-semibold text-[10px] uppercase">Soil Moisture</span>
+        <span class="text-slate-400 font-semibold text-[10px] uppercase">${window.t('Soil Moisture')}</span>
         <div class="space-x-1.5 flex items-center">
           <span class="font-bold font-mono-val text-sky-700">${latest.moisture}%</span>
           <span class="text-sky-500 font-bold text-xs">${mTrend}</span>
         </div>
       </div>
       <div class="flex justify-between items-center">
-        <span class="text-slate-400 font-semibold text-[10px] uppercase">Soil Temp</span>
+        <span class="text-slate-400 font-semibold text-[10px] uppercase">${window.t('Soil Temp')}</span>
         <div class="space-x-1.5 flex items-center">
           <span class="font-bold font-mono-val text-amber-700">${latest.soilTemp}°C</span>
           <span class="text-amber-500 font-bold text-xs">${stTrend}</span>
         </div>
       </div>
       <div class="flex justify-between items-center">
-        <span class="text-slate-400 font-semibold text-[10px] uppercase">Soil pH</span>
+        <span class="text-slate-400 font-semibold text-[10px] uppercase">${window.t('Soil pH')}</span>
         <div class="space-x-1.5 flex items-center">
           <span class="font-bold font-mono-val text-purple-700">pH ${latest.ph}</span>
           <span class="text-purple-400 font-bold text-xs">${pTrend}</span>

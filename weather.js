@@ -183,7 +183,7 @@ class WeatherManager {
     weatherContainer.innerHTML = `
       <div class="flex items-center justify-center h-48">
         <div class="loader mr-2"></div>
-        <span class="text-slate-500 font-medium">Loading weather data...</span>
+        <span class="text-slate-500 font-medium">${window.t ? window.t('Loading...') : 'Loading weather data...'}</span>
       </div>
     `;
 
@@ -247,11 +247,11 @@ class WeatherManager {
         <div class="mt-4 grid grid-cols-2 gap-4 border-t border-white/20 pt-4 text-xs opacity-90">
           <div class="flex items-center">
             <i class="fas fa-tint w-5 text-sky-200"></i>
-            <span>Humidity: <strong>${weather.humidity}%</strong></span>
+            <span>${window.t ? window.t('Humidity') : 'Humidity'}: <strong>${weather.humidity}%</strong></span>
           </div>
           <div class="flex items-center">
             <i class="fas fa-wind w-5 text-sky-200"></i>
-            <span>Wind: <strong>${weather.windSpeed} km/h</strong></span>
+            <span>${window.t ? window.t('Wind') : 'Wind'}: <strong>${weather.windSpeed} km/h</strong></span>
           </div>
         </div>
       </div>
