@@ -122,6 +122,21 @@
         </div>
       </div>
       <button type="submit" class="submit-btn mt-2" id="login-btn">Sign In to Dashboard</button>
+
+      <!-- Quick Demo Account Access -->
+      <div class="pt-3 border-t border-slate-100 mt-3">
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 text-center">Quick Demo Access</p>
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" onclick="fillCredentials('demo', 'demo1234')" class="px-2.5 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold text-center transition flex flex-col items-center cursor-pointer">
+            <span>🌱 Demo Farmer</span>
+            <span class="text-[10px] text-emerald-600 font-normal mt-0.5">demo / demo1234</span>
+          </button>
+          <button type="button" onclick="fillCredentials('admin', 'admin123')" class="px-2.5 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold text-center transition flex flex-col items-center cursor-pointer">
+            <span>👑 Admin User</span>
+            <span class="text-[10px] text-slate-500 font-normal mt-0.5">admin / admin123</span>
+          </button>
+        </div>
+      </div>
     </form>
 
     <!-- REGISTER -->
@@ -188,6 +203,12 @@
   }
   function clearAlert() {
     document.getElementById('alert-box').className = 'alert';
+  }
+
+  function fillCredentials(u, p) {
+    document.getElementById('login-username').value = u;
+    document.getElementById('login-password').value = p;
+    showAlert('Filled credentials for ' + u + '. Click "Sign In" or press Enter!', 'success');
   }
 
   function togglePwd(id, btn) {
