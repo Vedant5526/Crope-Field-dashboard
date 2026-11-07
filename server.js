@@ -1,3 +1,4 @@
+
 const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
@@ -90,7 +91,7 @@ async function identifyUser(req, res, next) {
       req.user = users[0];
       return next();
     }
-  } catch (e) {}
+  } catch (e) { }
 
   return res.status(401).json({ error: 'Authentication required. No user found in database.' });
 }
@@ -296,7 +297,7 @@ app.get('/api/fields', identifyUser, async (req, res) => {
           yield: h.yield_amount,
           notes: h.notes
         }));
-      
+
       let coords = f.coordinates;
       if (typeof coords === 'string') {
         try { coords = JSON.parse(coords); } catch (e) { coords = []; }
@@ -459,7 +460,7 @@ app.post('/api/yields', identifyUser, async (req, res) => {
       );
 
       // 3. Append to field history
-      const historyNotes = `Harvest yield of ${quantity} ${unit || 'Tons'} logged. Revenue: $${revenue}, Cost: $${cost}`;
+      const historyNotes = `Harvest yield of ${quantity} ${unit || 'Tons'} logged. Revenue: ₹${revenue}, Cost: ₹${cost}`;
       await connection.query(
         'INSERT INTO field_history (field_id, history_date, crop, yield_amount, notes) VALUES (?, ?, ?, ?, ?)',
         [field_id, date, crop_name, `${quantity} ${unit || 'Tons'}`, historyNotes]
@@ -785,23 +786,23 @@ app.post('/api/reset', identifyUser, async (req, res) => {
 
 // ── Maharashtra APMC Mandis Directory ─────────────────────────────────────────
 const MAHARASHTRA_APMC = {
-  "Pune":       ["Pune APMC"],
-  "Nashik":     ["Lasalgaon APMC", "Nashik APMC", "Niphad APMC"],
-  "Nanded":     ["Nanded APMC", "Dharmabad APMC"],
+  "Pune": ["Pune APMC"],
+  "Nashik": ["Lasalgaon APMC", "Nashik APMC", "Niphad APMC"],
+  "Nanded": ["Nanded APMC", "Dharmabad APMC"],
   "Aurangabad": ["Aurangabad APMC", "Paithan APMC"],
-  "Latur":      ["Latur APMC", "Ahmedpur APMC"],
+  "Latur": ["Latur APMC", "Ahmedpur APMC"],
   "Ahmednagar": ["Rahuri APMC", "Sangamner APMC"],
-  "Solapur":    ["Solapur APMC", "Barshi APMC"],
-  "Kolhapur":   ["Kolhapur APMC"],
-  "Satara":     ["Satara APMC"],
-  "Sangli":     ["Sangli APMC"],
-  "Akola":      ["Akola APMC"],
-  "Amravati":   ["Amravati APMC"],
-  "Nagpur":     ["Nagpur APMC", "Wardha APMC"]
+  "Solapur": ["Solapur APMC", "Barshi APMC"],
+  "Kolhapur": ["Kolhapur APMC"],
+  "Satara": ["Satara APMC"],
+  "Sangli": ["Sangli APMC"],
+  "Akola": ["Akola APMC"],
+  "Amravati": ["Amravati APMC"],
+  "Nagpur": ["Nagpur APMC", "Wardha APMC"]
 };
 
 const MH_COMMODITIES = ["Wheat", "Rice", "Soybeans", "Maize", "Cotton", "Onion",
-                        "Tur (Pigeon Peas)", "Tomato", "Grapes", "Turmeric", "Sugarcane"];
+  "Tur (Pigeon Peas)", "Tomato", "Grapes", "Turmeric", "Sugarcane"];
 
 app.get('/api/maharashtra-mandis', identifyUser, async (req, res) => {
   try {
@@ -821,7 +822,7 @@ app.get('/api/maharashtra-mandis', identifyUser, async (req, res) => {
           const apiData = await apiRes.json();
           liveRecords = apiData.records || [];
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     const result = {};
@@ -835,15 +836,15 @@ app.get('/api/maharashtra-mandis', identifyUser, async (req, res) => {
           isLive: matched.length > 0,
           prices: matched.length > 0
             ? matched.map(r => ({
-                commodity: r.commodity,
-                variety: r.variety,
-                min: parseFloat(r.min_price) || 0,
-                max: parseFloat(r.max_price) || 0,
-                modal: parseFloat(r.modal_price) || 0,
-                date: r.arrival_date,
-                unit: "Quintal",
-                currency: "INR"
-              }))
+              commodity: r.commodity,
+              variety: r.variety,
+              min: parseFloat(r.min_price) || 0,
+              max: parseFloat(r.max_price) || 0,
+              modal: parseFloat(r.modal_price) || 0,
+              date: r.arrival_date,
+              unit: "Quintal",
+              currency: "INR"
+            }))
             : MH_COMMODITIES.map(c => ({ commodity: c, isStaticFallback: true }))
         };
       }

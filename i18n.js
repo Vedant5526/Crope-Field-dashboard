@@ -160,7 +160,14 @@ const autoDict = {
         "All systems operational. No active tasks.": "सभी सिस्टम सक्रिय हैं। कोई सक्रिय कार्य नहीं।",
         "Optimal Status": "सर्वोत्तम स्थिति",
         "Action Needed": "कार्रवाई आवश्यक",
-        "Out of Range": "सीमा से बाहर"
+        "Out of Range": "सीमा से बाहर",
+        "Production Costs vs Revenue (₹)": "उत्पादन लागत बनाम राजस्व (₹)",
+        "Harvesting Cost (₹)": "कटाई लागत (₹)",
+        "Sale Revenue (₹)": "बिक्री राजस्व (₹)",
+        "Production Cost (₹)": "उत्पादन लागत (₹)",
+        "Gross Revenue (₹)": "सकल राजस्व (₹)",
+        "Net Profit (₹)": "शुद्ध लाभ (₹)",
+        "Value in Rupees (₹)": "मूल्य रुपये में (₹)"
     },
     "mr": {
         "Overview": "विहंगावलोकन",
@@ -322,7 +329,14 @@ const autoDict = {
         "All systems operational. No active tasks.": "सर्व सिस्टम सक्रिय. कोणतेही सक्रिय कार्य नाही.",
         "Optimal Status": "सर्वोत्तम स्थिती",
         "Action Needed": "कारवाई आवश्यक",
-        "Out of Range": "मर्यादेबाहेर"
+        "Out of Range": "मर्यादेबाहेर",
+        "Production Costs vs Revenue (₹)": "उत्पादन खर्च विरूद्ध महसूल (₹)",
+        "Harvesting Cost (₹)": "काढणी खर्च (₹)",
+        "Sale Revenue (₹)": "विक्री महसूल (₹)",
+        "Production Cost (₹)": "उत्पादन खर्च (₹)",
+        "Gross Revenue (₹)": "एकूण महसूल (₹)",
+        "Net Profit (₹)": "निव्वळ नफा (₹)",
+        "Value in Rupees (₹)": "किंमत रुपयात (₹)"
     }
 };
 

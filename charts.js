@@ -152,21 +152,21 @@ class ChartManager {
         labels: seasons,
         datasets: [
           {
-            label: "Production Cost ($)",
+            label: "Production Cost (₹)",
             data: costs,
             backgroundColor: "rgba(239, 68, 68, 0.8)", // Light Red
             borderColor: "rgba(239, 68, 68, 1)",
             borderWidth: 1
           },
           {
-            label: "Gross Revenue ($)",
+            label: "Gross Revenue (₹)",
             data: revenues,
             backgroundColor: "rgba(16, 185, 129, 0.8)", // Light Emerald
             borderColor: "rgba(16, 185, 129, 1)",
             borderWidth: 1
           },
           {
-            label: "Net Profit ($)",
+            label: "Net Profit (₹)",
             data: netProfits,
             type: "line",
             borderColor: "rgba(37, 99, 235, 1)", // Blue
@@ -188,7 +188,7 @@ class ChartManager {
             beginAtZero: true,
             title: {
               display: true,
-              text: "Value in USD ($)",
+              text: "Value in Rupees (₹)",
               font: { weight: "bold" }
             }
           }
