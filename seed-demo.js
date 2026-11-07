@@ -57,11 +57,11 @@ async function seed() {
 
   // 4. Seed Fields with user_id
   const fields = [
-    ["f1", demoUserId, "North Meadow", 12.5, "Loam", 18.5254, 73.8587, "[[18.527,73.857],[18.527,73.8604],[18.5238,73.8604],[18.5238,73.857]]"],
-    ["f2", demoUserId, "East Riverfront", 8.2, "Clay Loam", 18.5190, 73.8710, "[[18.521,73.869],[18.521,73.873],[18.517,73.873],[18.517,73.869]]"],
-    ["f3", demoUserId, "Hillside Slopes", 5.4, "Sandy Loam", 18.5080, 73.8480, "[[18.510,73.846],[18.510,73.850],[18.506,73.850],[18.506,73.846]]"],
-    ["f4", demoUserId, "South Plateau", 10.8, "Black Cotton", 18.5010, 73.8650, "[[18.503,73.863],[18.503,73.867],[18.499,73.867],[18.499,73.863]]"],
-    ["f5", demoUserId, "Western Orchards", 6.3, "Red Laterite", 18.5300, 73.8420, "[[18.532,73.840],[18.532,73.844],[18.528,73.844],[18.528,73.840]]"]
+    ["f1", demoUserId, "Shree Ganesh Mala", 12.5, "Loam", 18.5254, 73.8587, "[[18.527,73.857],[18.527,73.8604],[18.5238,73.8604],[18.5238,73.857]]"],
+    ["f2", demoUserId, "Godavari Kinara", 8.2, "Clay Loam", 18.5190, 73.8710, "[[18.521,73.869],[18.521,73.873],[18.517,73.873],[18.517,73.869]]"],
+    ["f3", demoUserId, "Shivneri Tekdi", 5.4, "Sandy Loam", 18.5080, 73.8480, "[[18.510,73.846],[18.510,73.850],[18.506,73.850],[18.506,73.846]]"],
+    ["f4", demoUserId, "Kisan Shivar", 10.8, "Black Cotton", 18.5010, 73.8650, "[[18.503,73.863],[18.503,73.867],[18.499,73.867],[18.499,73.863]]"],
+    ["f5", demoUserId, "Sahyadri Baug", 6.3, "Red Laterite", 18.5300, 73.8420, "[[18.532,73.840],[18.532,73.844],[18.528,73.844],[18.528,73.840]]"]
   ];
   await q("INSERT INTO fields (id,user_id,name,area,soil_type,lat,lng,coordinates) VALUES ?", [fields]);
   console.log("Fields seeded (5) linked to user " + demoUserId);

@@ -10,7 +10,7 @@ const DEFAULT_MOCK_DATA = {
   fields: [
     {
       id: "f1",
-      name: "North Meadow",
+      name: "Shree Ganesh Mala",
       area: 12.5,
       soil_type: "Loam",
       lat: 18.5254,
@@ -28,7 +28,7 @@ const DEFAULT_MOCK_DATA = {
     },
     {
       id: "f2",
-      name: "East Riverfront",
+      name: "Godavari Kinara",
       area: 8.2,
       soil_type: "Clay Loam",
       lat: 18.5190,
@@ -45,7 +45,7 @@ const DEFAULT_MOCK_DATA = {
     },
     {
       id: "f3",
-      name: "Hillside Slopes",
+      name: "Shivneri Tekdi",
       area: 5.4,
       soil_type: "Sandy Loam",
       lat: 18.5080,

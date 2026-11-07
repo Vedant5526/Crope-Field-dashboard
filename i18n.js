@@ -167,7 +167,13 @@ const autoDict = {
         "Production Cost (₹)": "उत्पादन लागत (₹)",
         "Gross Revenue (₹)": "सकल राजस्व (₹)",
         "Net Profit (₹)": "शुद्ध लाभ (₹)",
-        "Value in Rupees (₹)": "मूल्य रुपये में (₹)"
+        "Value in Rupees (₹)": "मूल्य रुपये में (₹)",
+        "Shree Ganesh Mala": "श्री गणेश माला",
+        "Godavari Kinara": "गोदावरी किनारा",
+        "Shivneri Tekdi": "शिवनेरी पहाड़ी",
+        "Kisan Shivar": "किसान शिवार",
+        "Sahyadri Baug": "सह्याद्री बाग",
+        "Tulsi Mala": "तुलसी माला"
     },
     "mr": {
         "Overview": "विहंगावलोकन",
@@ -336,7 +342,13 @@ const autoDict = {
         "Production Cost (₹)": "उत्पादन खर्च (₹)",
         "Gross Revenue (₹)": "एकूण महसूल (₹)",
         "Net Profit (₹)": "निव्वळ नफा (₹)",
-        "Value in Rupees (₹)": "किंमत रुपयात (₹)"
+        "Value in Rupees (₹)": "किंमत रुपयात (₹)",
+        "Shree Ganesh Mala": "श्री गणेश मळा",
+        "Godavari Kinara": "गोदावरी किनारा",
+        "Shivneri Tekdi": "शिवनेरी टेकडी",
+        "Kisan Shivar": "किसान शिवार",
+        "Sahyadri Baug": "सह्याद्री बाग",
+        "Tulsi Mala": "तुळशी मळा"
     }
 };
 
