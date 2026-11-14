@@ -339,6 +339,35 @@ app.post('/api/fields', identifyUser, async (req, res) => {
   }
 });
 
+app.put('/api/fields/:id', identifyUser, async (req, res) => {
+  const { id } = req.params;
+  const { name, area, soil_type, lat, lng, coordinates } = req.body;
+  const isAdmin = req.user.role === 'Admin';
+  try {
+    const fields = [];
+    const values = [];
+    if (name !== undefined) { fields.push('name = ?'); values.push(name); }
+    if (area !== undefined) { fields.push('area = ?'); values.push(area); }
+    if (soil_type !== undefined) { fields.push('soil_type = ?'); values.push(soil_type); }
+    if (lat !== undefined) { fields.push('lat = ?'); values.push(lat); }
+    if (lng !== undefined) { fields.push('lng = ?'); values.push(lng); }
+    if (coordinates !== undefined) { fields.push('coordinates = ?'); values.push(JSON.stringify(coordinates)); }
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+    values.push(id);
+    let query = `UPDATE fields SET ${fields.join(', ')} WHERE id = ?`;
+    if (!isAdmin) {
+      query += ' AND (user_id = ? OR user_id IS NULL)';
+      values.push(req.user.id);
+    }
+    await pool.query(query, values);
+    res.json({ message: 'Field updated successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.delete('/api/fields/:id', identifyUser, async (req, res) => {
   const { id } = req.params;
   const isAdmin = req.user.role === 'Admin';
@@ -395,6 +424,29 @@ app.put('/api/crops/:id/stage', identifyUser, async (req, res) => {
   try {
     await pool.query('UPDATE crops SET status = ? WHERE id = ?', [status, id]);
     res.json({ message: 'Crop stage updated successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/crops/:id', identifyUser, async (req, res) => {
+  const { id } = req.params;
+  const { crop_name, variety, sowing_date, harvest_date, status, notes } = req.body;
+  try {
+    const fields = [];
+    const values = [];
+    if (crop_name !== undefined) { fields.push('crop_name = ?'); values.push(crop_name); }
+    if (variety !== undefined) { fields.push('variety = ?'); values.push(variety); }
+    if (sowing_date !== undefined) { fields.push('sowing_date = ?'); values.push(sowing_date); }
+    if (harvest_date !== undefined) { fields.push('harvest_date = ?'); values.push(harvest_date); }
+    if (status !== undefined) { fields.push('status = ?'); values.push(status); }
+    if (notes !== undefined) { fields.push('notes = ?'); values.push(notes); }
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+    values.push(id);
+    await pool.query(`UPDATE crops SET ${fields.join(', ')} WHERE id = ?`, values);
+    res.json({ message: 'Crop updated successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
