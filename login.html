@@ -9,7 +9,8 @@
     @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
     * { font-family: "Inter", sans-serif; box-sizing: border-box; }
     body {
-      background: linear-gradient(135deg, #052e16 0%, #14532d 40%, #166534 70%, #15803d 100%);
+      background: linear-gradient(135deg, rgba(5,46,22,0.93) 0%, rgba(20,83,45,0.90) 50%, rgba(21,128,61,0.88) 100%),
+                  url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1600&q=80') center/cover no-repeat fixed;
       min-height: 100vh;
       display: flex; align-items: center; justify-content: center;
       position: relative; overflow: hidden;
@@ -92,7 +93,9 @@
   <span class="leaf" style="bottom:8%;right:6%;transform:rotate(20deg)">🌾</span>
 
   <div class="card">
-    <div class="logo-ring">🌱</div>
+    <div class="logo-ring overflow-hidden p-2.5 bg-gradient-to-br from-emerald-500 to-green-700 shadow-lg shadow-emerald-900/30">
+      <img src="https://img.icons8.com/fluency/96/farm.png" alt="GreenField Logo" class="w-12 h-12 object-contain" onerror="this.outerHTML='🌱'" />
+    </div>
     <h1 class="text-center text-xl font-extrabold text-slate-800 mb-1">Crop & Field Dashboard</h1>
     <p class="text-center text-xs text-slate-400 mb-6 font-medium">Maharashtra Agri Management Platform</p>
 

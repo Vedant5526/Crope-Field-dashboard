@@ -60,6 +60,14 @@ class App {
     if (user) {
       const greeting = document.getElementById('user-greeting');
       if (greeting) greeting.textContent = user.full_name + ' (' + user.role + ')';
+      // Set avatar initials
+      const avatar = document.getElementById('user-avatar');
+      if (avatar) {
+        const initials = user.full_name
+          ? user.full_name.trim().split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+          : (user.username || 'U')[0].toUpperCase();
+        avatar.textContent = initials;
+      }
     }
 
     // Initialize charts on start
@@ -428,14 +436,30 @@ class App {
       return;
     }
 
+    const soilCoverImages = {
+      'Loam':         'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80',
+      'Clay Loam':    'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80',
+      'Sandy Loam':   'https://images.unsplash.com/photo-1499529112087-3cb3b73cec95?w=600&q=80',
+      'Black Cotton': 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&q=80',
+      'Red Laterite': 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80',
+    };
+
     container.innerHTML = fields.map(field => {
       const activeCrop = crops.find(c => c.field_id === field.id && c.status !== "Harvested");
       const cropBadge = activeCrop 
         ? `<span class="px-2 py-0.5 rounded text-xs font-semibold text-emerald-700 bg-emerald-100">${window.t(activeCrop.crop_name)} (${window.t(activeCrop.status)})</span>`
         : `<span class="px-2 py-0.5 rounded text-xs font-semibold text-slate-500 bg-slate-100">${window.t('Fallow')}</span>`;
 
+      const coverImg = soilCoverImages[field.soil_type] || soilCoverImages['Loam'];
+
       return `
-        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+        <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between">
+          <div class="h-32 bg-slate-100 overflow-hidden relative">
+            <img src="${coverImg}" alt="${field.name}" class="w-full h-full object-cover" onerror="this.style.display='none'">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+            <span class="absolute bottom-2 left-3 text-white text-xs font-semibold drop-shadow">${field.soil_type}</span>
+          </div>
+          <div class="p-5 flex flex-col flex-1 justify-between">
           <div>
             <div class="flex justify-between items-start">
               <div>
@@ -474,6 +498,7 @@ class App {
               ${window.t('Assign Crop')}
             </button>
           </div>
+          </div><!-- /p-5 wrapper -->
         </div>
       `;
     }).join("");
@@ -492,7 +517,19 @@ class App {
     document.getElementById("detail-field-name").textContent = field.name;
     document.getElementById("detail-area").textContent = `${field.area} Acres`;
     document.getElementById("detail-soil").textContent = field.soil_type;
-    document.getElementById("detail-coords").textContent = `${parseFloat(field.lat).toFixed(5)}, ${parseFloat(field.lng).toFixed(5)}`;
+    document.getElementById("detail-coords").innerHTML = `<i class="fas fa-map-marker-alt text-emerald-400 text-[10px]"></i> ${parseFloat(field.lat).toFixed(5)}, ${parseFloat(field.lng).toFixed(5)}`;
+
+    const soilCoverImages = {
+      'Loam':         'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1000&q=80',
+      'Clay Loam':    'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=1000&q=80',
+      'Sandy Loam':   'https://images.unsplash.com/photo-1499529112087-3cb3b73cec95?w=1000&q=80',
+      'Black Cotton': 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1000&q=80',
+      'Red Laterite': 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1000&q=80',
+    };
+    const modalImg = document.getElementById("detail-field-image");
+    if (modalImg) modalImg.src = soilCoverImages[field.soil_type] || soilCoverImages['Loam'];
+    const soilBadge = document.getElementById("detail-soil-badge");
+    if (soilBadge) soilBadge.textContent = field.soil_type;
 
     // Build Crop History list
     const fieldCrops = crops.filter(c => c.field_id === fieldId);
@@ -763,6 +800,12 @@ class App {
       return;
     }
 
+    const cropEmojis = {
+      'Wheat': '🌾', 'Rice': '🌾', 'Soybeans': '🫘', 'Cotton': '🌸',
+      'Onion': '🧅', 'Maize': '🌽', 'Corn': '🌽', 'Grapes': '🍇',
+      'Tur': '🫛', 'Tomato': '🍅', 'Sugarcane': '🎋', 'Soybean': '🫘',
+    };
+
     container.innerHTML = crops.map(crop => {
       const field = fields.find(f => f.id === crop.field_id);
       const fieldName = field ? field.name : "Unknown Field";
@@ -773,12 +816,19 @@ class App {
       else if (crop.status === "Ready for Harvest") statusColor = "stage-badge-ready";
       else if (crop.status === "Harvested") statusColor = "stage-badge-harvested";
 
+      const cropIcon = cropEmojis[crop.crop_name] || '🌱';
+
       // Crop Row Layout
       return `
         <tr class="border-b border-slate-100 hover:bg-slate-50 transition text-slate-700">
           <td class="px-6 py-4 font-bold text-slate-800">
-            <span class="block">${crop.crop_name}</span>
-            <span class="text-xs text-slate-400 font-normal">${crop.variety}</span>
+            <div class="flex items-center gap-2">
+              <span class="text-2xl" title="${crop.crop_name}">${cropIcon}</span>
+              <div>
+                <span class="block">${crop.crop_name}</span>
+                <span class="text-xs text-slate-400 font-normal">${crop.variety}</span>
+              </div>
+            </div>
           </td>
           <td class="px-6 py-4 font-semibold text-slate-600">${fieldName}</td>
           <td class="px-6 py-4 text-xs font-medium">${crop.sowing_date}</td>
@@ -1119,6 +1169,23 @@ class App {
     sourceBadge.className = priceInfo.isMock 
       ? "px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800"
       : "px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800";
+
+    // Update commodity visual card
+    const cropImages = {
+      'Wheat': 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=200&q=80',
+      'Rice': 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=200&q=80',
+      'Soybeans': 'https://images.unsplash.com/photo-1599940824399-b87987ceb72a?w=200&q=80',
+      'Maize': 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=200&q=80',
+      'Cotton': 'https://images.unsplash.com/photo-1606041008023-472dfb5e530f?w=200&q=80',
+      'Onion': 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=200&q=80',
+      'Grapes': 'https://images.unsplash.com/photo-1537640538966-79f369143f8f?w=200&q=80',
+    };
+    const mandiImg = document.getElementById("mandi-crop-image");
+    if (mandiImg) mandiImg.src = cropImages[crop] || 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=200&q=80';
+    const mandiTitle = document.getElementById("mandi-crop-title");
+    if (mandiTitle) mandiTitle.textContent = `${crop} — Agmarknet Rate`;
+    const mandiSub = document.getElementById("mandi-crop-subtitle");
+    if (mandiSub) mandiSub.textContent = `${mandi}, ${district} (${state})`;
 
     // Update Price Trend Chart
     const trend = window.marketPriceManager.getHistoricalTrend(priceInfo.modal);

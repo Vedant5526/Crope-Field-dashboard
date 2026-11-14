@@ -232,7 +232,9 @@
     <div>
       <!-- Brand Logo -->
       <div class="flex items-center space-x-3 px-2 py-4 mb-6 border-b border-slate-800">
-        <i class="fas fa-seedling text-3xl text-emerald-400"></i>
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center p-1.5 shadow-md shadow-emerald-950/40 flex-shrink-0">
+          <img src="https://img.icons8.com/fluency/96/farm.png" alt="Logo" class="w-full h-full object-contain" onerror="this.outerHTML='<i class=\'fas fa-seedling text-2xl text-white\'></i>'" />
+        </div>
         <div>
           <span class="text-xl font-extrabold tracking-wider text-white">GreenField</span>
           <span class="block text-[10px] text-slate-400 font-bold uppercase tracking-widest">Farm Management</span>
@@ -308,7 +310,7 @@
         
         <!-- Logged-in user chip -->
         <div class="hidden sm:flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5">
-          <span class="text-emerald-700 text-sm">&#127807;</span>
+          <div id="user-avatar" class="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">D</div>
           <span id="user-greeting" class="text-xs font-semibold text-emerald-800">Loading...</span>
         </div>
         <!-- Notification Icon -->
@@ -559,8 +561,16 @@
           <!-- Current Mandi price display -->
           <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
             <div>
-              <div class="flex justify-between items-start border-b border-slate-100 pb-2 mb-4">
-                <h3 class="font-extrabold text-slate-800 text-sm">Today's Agmarknet Price</h3>
+              <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 rounded-xl overflow-hidden bg-emerald-50 border border-slate-200 shadow-sm flex-shrink-0">
+                    <img id="mandi-crop-image" src="https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=200&q=80" alt="Crop" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=200&q=80'" />
+                  </div>
+                  <div>
+                    <h3 class="font-extrabold text-slate-800 text-sm" id="mandi-crop-title">Today's Agmarknet Price</h3>
+                    <p class="text-xs text-slate-400 font-medium" id="mandi-crop-subtitle">Wheat — Market Summary</p>
+                  </div>
+                </div>
                 <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800" id="mandi-source-badge">Mock Data</span>
               </div>
               
@@ -1033,12 +1043,20 @@
   <!-- ============================================== -->
   <div id="field-detail-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
-      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-        <div>
-          <h3 id="detail-field-name" class="font-black text-slate-800 text-base">Field Details</h3>
-          <span id="detail-coords" class="text-[10px] text-slate-400 font-bold block">18.5254, 73.8587</span>
+      <!-- Field Cover Image Banner -->
+      <div class="h-32 w-full relative bg-slate-900 overflow-hidden flex-shrink-0">
+        <img id="detail-field-image" src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1000&q=80" alt="Field Cover" class="w-full h-full object-cover opacity-85" />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+        <button onclick="app.closeModal('field-detail-modal')" class="absolute top-3 right-3 text-white/90 hover:text-white bg-black/40 hover:bg-black/60 rounded-full w-8 h-8 flex items-center justify-center text-sm transition shadow-sm"><i class="fas fa-times"></i></button>
+        <div class="absolute bottom-3 left-6 right-6 flex items-end justify-between">
+          <div>
+            <h3 id="detail-field-name" class="font-black text-white text-xl drop-shadow">Field Details</h3>
+            <span id="detail-coords" class="text-xs text-white/90 font-medium drop-shadow flex items-center gap-1 mt-0.5">
+              <i class="fas fa-map-marker-alt text-emerald-400 text-[10px]"></i> 18.5254, 73.8587
+            </span>
+          </div>
+          <span id="detail-soil-badge" class="px-2.5 py-1 rounded-full text-xs font-bold bg-white/20 backdrop-blur-md text-white border border-white/30 drop-shadow">Loam</span>
         </div>
-        <button onclick="app.closeModal('field-detail-modal')" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fas fa-times"></i></button>
       </div>
 
       <div class="flex-grow overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
